@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from __future__ import print_function
-
 import argparse
 import inspect
 import os
@@ -15,8 +14,7 @@ from sklearn.metrics import confusion_matrix
 import csv
 import numpy as np
 import glob
-
-# torch
+import torch.nn.functional as F
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -24,33 +22,41 @@ import torch.optim as optim
 import yaml
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
-
-class DictAction(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError("nargs not allowed")
-        super(DictAction, self).__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        input_dict = eval(f'dict({values})')  #pylint: disable=W0123
-        output_dict = getattr(namespace, self.dest)
-        for k in input_dict:
-            output_dict[k] = input_dict[k]
-        setattr(namespace, self.dest, output_dict)
+# from cosine_lr_schedueler import CosineLRScheduler
+from torchlight import DictAction
+#import resource
+import copy
+from torch import linalg as LA
 
 
 
-# import resource
-# rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-# resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
+def ema_update(source, target, decay=0.99, start_itr=20, itr=None):
+    # If an iteration counter is provided and itr is less than the start itr,
+    # peg the ema weights to the underlying weights.
+    if itr and itr<start_itr:
+        decay = 0.0
+    # source = copy.deepcopy(source)
+    with torch.no_grad():
+        # for key, value in source.module.state_dict().items():
+        for key, value in source.state_dict().items():
+            target.state_dict()[key].copy_(target.state_dict()[key] * decay + value * (1 - decay))
+            # print(key)
+
+
+#rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+#resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 
 def init_seed(seed):
     torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    # torch.backends.cudnn.enabled = False
-    torch.backends.cudnn.deterministic = False
+    # torch.backends.cudnn.enabled = True
+    # training speed is too slow if set to True
+    torch.backends.cudnn.deterministic = True
+
+    # on cuda 11 cudnn8, the default algorithm is very slow
+    # unlike on cuda 10, the default works well
     torch.backends.cudnn.benchmark = True
 
 def import_class(import_str):
@@ -70,10 +76,21 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Unsupported value encountered.')
 
 
+def get_mmd_loss(z, z_prior, y, num_cls):
+    y_valid = [i_cls in y for i_cls in range(num_cls)]
+    z_mean = torch.stack([z[y == i_cls].mean(dim=0) for i_cls in range(num_cls)], dim=0)
+    l2_z_mean = LA.norm(z.mean(dim=0), ord=2)
+    mmd_loss = F.mse_loss(z_mean[y_valid], z_prior[y_valid].to(z.device))
+    return mmd_loss, l2_z_mean, z_mean[y_valid]
+
+
 def get_parser():
+
+
     # parameter priority: command line > config > default
     parser = argparse.ArgumentParser(
-        description='Spatial Temporal Graph Convolution Network')
+        description='GRA Transformer')
+
     parser.add_argument(
         '--work-dir',
         default='./work_dir/temp',
@@ -82,7 +99,7 @@ def get_parser():
     parser.add_argument('-model_saved_name', default='')
     parser.add_argument(
         '--config',
-        default='config/degcn/anubis.yaml',
+        default='config/blockgcn/anubis.yaml',
         help='path to the configuration file')
 
     # processor
@@ -91,8 +108,15 @@ def get_parser():
     parser.add_argument(
         '--save-score',
         type=str2bool,
-        default=False,
+        default=True,
         help='if ture, the classification score will be stored')
+
+    # gra
+    parser.add_argument(
+        '--joint-label',
+        type=list,
+        default=[],
+        help='tells which group each joint belongs to')
 
     # visulize and debug
     parser.add_argument(
@@ -110,13 +134,22 @@ def get_parser():
     parser.add_argument(
         '--save-epoch',
         type=int,
-        default=30,
+        default=10,
         help='the start epoch to save model (#iteration)')
     parser.add_argument(
         '--eval-interval',
         type=int,
         default=5,
         help='the interval for evaluating models (#iteration)')
+    parser.add_argument(
+        '--ema',
+        action="store_true",
+        default=False,
+        help='ema weight for eval')
+
+    parser.add_argument('--lambda_1', type=float, default=1e-4)
+    parser.add_argument('--lambda_2', type=float, default=1e-1)
+
     parser.add_argument(
         '--print-log',
         type=str2bool,
@@ -178,12 +211,16 @@ def get_parser():
     parser.add_argument(
         '--device',
         type=int,
-        default=0,
+        default=[0,1,2,3,4,5,6,7],
         nargs='+',
         help='the indexes of GPUs for training or testing')
     parser.add_argument('--optimizer', default='SGD', help='type of optimizer')
     parser.add_argument(
         '--nesterov', type=str2bool, default=False, help='use nesterov or not')
+    parser.add_argument(
+        '--momentum', type=float, default=0.9, help='nesterov momentum')
+    parser.add_argument(
+        '--alpha', type=bool, default=False, help='coefficient for statistical topology encoding')
     parser.add_argument(
         '--batch-size', type=int, default=256, help='training batch size')
     parser.add_argument(
@@ -208,29 +245,10 @@ def get_parser():
         type=float,
         default=0.1,
         help='decay rate for learning rate')
-    parser.add_argument(
-        '--aux-weight',
-        type=float,
-        default=0.2,
-        help='aux loss weight'
-    )
     parser.add_argument('--warm_up_epoch', type=int, default=0)
-    # force rerun
-    parser.add_argument(
-        '--force-rerun', type=str2bool, default=False, help='force rerun or not')
 
     return parser
 
-class WeightSumLoss(nn.Module):
-    def __init__(self, weight=0.1):
-        super().__init__()
-        self.weight = weight
-        self.loss = nn.CrossEntropyLoss()
-
-    def forward(self, x, aux=None, label=None):
-        if aux is None:
-            return self.loss(x, label)
-        return self.loss(x, label) + self.weight * self.loss(aux, label)
 
 class Processor():
     """ 
@@ -245,10 +263,7 @@ class Processor():
                 arg.model_saved_name = os.path.join(arg.work_dir, 'runs')
                 if os.path.isdir(arg.model_saved_name):
                     print('log_dir: ', arg.model_saved_name, 'already exist')
-                    if arg.force_rerun:
-                        answer = 'y'
-                    else:
-                        answer = input('delete it? y/n:')
+                    answer = input('delete it? y/n:')
                     if answer == 'y':
                         shutil.rmtree(arg.model_saved_name)
                         print('Dir removed: ', arg.model_saved_name)
@@ -272,6 +287,9 @@ class Processor():
         self.best_acc = 0
         self.best_acc_epoch = 0
 
+        self.best_acc_ema = 0
+        self.best_acc_epoch_ema = 0
+
         self.model = self.model.cuda(self.output_device)
 
         if type(self.arg.device) is list:
@@ -280,18 +298,32 @@ class Processor():
                     self.model,
                     device_ids=self.arg.device,
                     output_device=self.output_device)
+        if self.arg.ema:
+            Model = import_class(self.arg.model)
+            self.model_ema = Model(**self.arg.model_args).cuda(self.output_device)
+            ema_update(self.model, self.model_ema, itr=0)
+
 
     def load_data(self):
         Feeder = import_class(self.arg.feeder)
         self.data_loader = dict()
         if self.arg.phase == 'train':
-            self.data_loader['train'] = torch.utils.data.DataLoader(
-                dataset=Feeder(**self.arg.train_feeder_args),
-                batch_size=self.arg.batch_size,
-                shuffle=True,
-                num_workers=self.arg.num_worker,
-                drop_last=True,
-                worker_init_fn=init_seed)
+
+            dataloader_args = {
+                'dataset': Feeder(**self.arg.train_feeder_args),
+                'batch_size': self.arg.batch_size,
+                'shuffle': True,
+                'num_workers': self.arg.num_worker,
+                'drop_last': True,
+                'pin_memory': True,
+                'worker_init_fn': init_seed
+            }
+
+            if self.arg.num_worker > 0:
+                dataloader_args['prefetch_factor'] = 16
+                
+            self.data_loader['train'] = torch.utils.data.DataLoader(**dataloader_args)
+            
         self.data_loader['test'] = torch.utils.data.DataLoader(
             dataset=Feeder(**self.arg.test_feeder_args),
             batch_size=self.arg.test_batch_size,
@@ -308,10 +340,10 @@ class Processor():
         print(Model)
         self.model = Model(**self.arg.model_args)
         print(self.model)
-        self.loss = WeightSumLoss(weight=self.arg.aux_weight).cuda(output_device)
+        self.loss = nn.CrossEntropyLoss().cuda(output_device)
 
         if self.arg.weights:
-            self.global_step = int(arg.weights[:-3].split('-')[-1])
+            self.global_step = int(self.arg.weights[:-3].split('-')[-1])
             self.print_log('Load weights from {}.'.format(self.arg.weights))
             if '.pkl' in self.arg.weights:
                 with open(self.arg.weights, 'r') as f:
@@ -343,12 +375,33 @@ class Processor():
 
     def load_optimizer(self):
         if self.arg.optimizer == 'SGD':
+
+            # my_list = ['fc.weight', 'fc.bias', 'fc_mu.weight', 'fc_mu.bias','fc_logvar.weight', 'fc_logvar.bias', 'decoder.weight', 'decoder.bias']
+            # params = list(filter(lambda kv: kv[0] in my_list, self.model.named_parameters()))
+            # base_params = list(filter(lambda kv: kv[0] not in my_list, self.model.named_parameters()))
+            #
+            # params = [i[1] for i in params]
+            # base_params = [i[1] for i in base_params]
+
             self.optimizer = optim.SGD(
                 self.model.parameters(),
                 lr=self.arg.base_lr,
-                momentum=0.9,
+                momentum=self.arg.momentum,
                 nesterov=self.arg.nesterov,
                 weight_decay=self.arg.weight_decay)
+
+        elif self.arg.optimizer == 'NAdam':
+            self.optimizer = optim.NAdam(
+                self.model.parameters(),
+                lr=self.arg.base_lr,
+                weight_decay=self.arg.weight_decay)
+
+        elif self.arg.optimizer == "AdamW":
+            self.optimizer = optim.AdamW(
+                self.model.parameters(),
+                lr=self.arg.base_lr,
+                weight_decay=self.arg.weight_decay)
+
         elif self.arg.optimizer == 'Adam':
             self.optimizer = optim.Adam(
                 self.model.parameters(),
@@ -369,7 +422,7 @@ class Processor():
             yaml.dump(arg_dict, f)
 
     def adjust_learning_rate(self, epoch):
-        if self.arg.optimizer == 'SGD' or self.arg.optimizer == 'Adam':
+        if self.arg.optimizer == 'SGD' or self.arg.optimizer == 'Adam' or self.arg.optimizer == 'NAdam':
             if epoch < self.arg.warm_up_epoch:
                 lr = self.arg.base_lr * (epoch + 1) / self.arg.warm_up_epoch
             else:
@@ -405,39 +458,80 @@ class Processor():
 
     def train(self, epoch, save_model=False):
         self.model.train()
+        if self.arg.ema:
+            self.model_ema.train()
         self.print_log('Training epoch: {}'.format(epoch + 1))
         loader = self.data_loader['train']
         self.adjust_learning_rate(epoch)
 
         loss_value = []
+        loss_value2 = []
         acc_value = []
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
         timer = dict(dataloader=0.001, model=0.001, statistics=0.001)
         process = tqdm(loader, ncols=40)
 
-        for batch_idx, (data, label, index) in enumerate(process):
+        # mix_precision is slower for this model!!!
+        use_amp = True
+        scaler = torch.amp.GradScaler(enabled=use_amp)
+        # torch.autograd.set_detect_anomaly(True)
+
+        soft_label_emma = 0
+        for batch_idx, (joint, data, label, index) in enumerate(process):
             self.global_step += 1
             with torch.no_grad():
                 data = data.float().cuda(self.output_device)
                 label = label.long().cuda(self.output_device)
             timer['dataloader'] += self.split_time()
 
+            # print(data[0,:,0,:,0])
+
+            # with autograd.detect_anomaly():
             # forward
-            try:
-                output, aux_output = self.model(data)
-            except ValueError:
-                # å¦‚æžœæ¨¡åž‹åªè¿”å›žä¸€ä¸ªè¾“å‡º
-                output = self.model(data)
-                aux_output = None
-            
-            loss = self.loss(output, aux_output, label)
+
+            class SoftTargetCrossEntropy(nn.Module):
+
+                def __init__(self):
+                    super(SoftTargetCrossEntropy, self).__init__()
+
+                def forward(self, x, target):
+                    # because p has already been passed through softmax !
+                    # cross entropy is non-symetric!! the order matters!!!
+                    loss = -torch.sum(target * torch.log(x+1e-20), dim=-1)
+                    return loss.mean()
+
+
+            with torch.cuda.amp.autocast(enabled=use_amp):
+
+                output, z = self.model(data, F.one_hot(label, num_classes=self.model.module.num_class), joint)
+                # output, z = self.model(data, F.one_hot(label, num_classes=self.model.num_class), joint)
+
+                ## for mmd loss
+                # output, y, z = self.model(data, F.one_hot(label, num_classes=self.model.module.num_class))
+                # mmd_loss, l2_z_mean, z_mean = get_mmd_loss(z, self.model.module.z_prior, label, self.model.module.num_class)
+
+                loss = self.loss(output, label)
+            loss2 = torch.zeros_like(loss).cuda(loss.device)
+
+
+
+            loss += loss2
+
+
+            # # for mmd loss
+            # lamb1, lamb2 = 1e-4, 1e-1
+            # loss += lamb2 * mmd_loss + lamb1 * l2_z_mean
+
+
             # backward
             self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+            scaler.scale(loss).backward()
+            scaler.step(self.optimizer)
+            scaler.update()
 
             loss_value.append(loss.data.item())
+            loss_value2.append(loss2.data.item())
             timer['model'] += self.split_time()
 
             value, predict_label = torch.max(output.data, 1)
@@ -445,7 +539,7 @@ class Processor():
             acc_value.append(acc.data.item())
             self.train_writer.add_scalar('acc', acc, self.global_step)
             self.train_writer.add_scalar('loss', loss.data.item(), self.global_step)
-
+            self.train_writer.add_scalar('loss2', loss2.data.item(), self.global_step)
             # statistics
             self.lr = self.optimizer.param_groups[0]['lr']
             self.train_writer.add_scalar('lr', self.lr, self.global_step)
@@ -457,7 +551,7 @@ class Processor():
             for k, v in timer.items()
         }
         self.print_log(
-            '\tMean training loss: {:.4f}.  Mean training acc: {:.2f}%.'.format(np.mean(loss_value), np.mean(acc_value)*100))
+            '\tMean training loss: {:.4f}. loss2: {:.4f}. Mean training acc: {:.2f}%.'.format(np.mean(loss_value), np.mean(loss_value2), np.mean(acc_value)*100))
         self.print_log('\tTime consumption: [Data]{dataloader}, [Network]{model}'.format(**proportion))
 
         if save_model:
@@ -472,30 +566,57 @@ class Processor():
         if result_file is not None:
             f_r = open(result_file, 'w')
         self.model.eval()
+        if self.arg.ema:
+            self.model_ema.eval()
         self.print_log('Eval epoch: {}'.format(epoch + 1))
         for ln in loader_name:
             loss_value = []
             score_frag = []
             label_list = []
             pred_list = []
+
+            loss_value_ema = []
+            score_frag_ema = []
+            label_list_ema = []
+            pred_list_ema = []
             step = 0
             process = tqdm(self.data_loader[ln], ncols=40)
-            for batch_idx, (data, label, index) in enumerate(process):
+            for batch_idx, (joint, data, label, index) in enumerate(process):
                 label_list.append(label)
+                if arg.ema:
+                    label_list_ema.append(label)
                 with torch.no_grad():
                     data = data.float().cuda(self.output_device)
                     label = label.long().cuda(self.output_device)
-                    try:
-                        output, aux_output = self.model(data)
-                    except ValueError:
-                        output = self.model(data)
-                        aux_output = None
-                    loss = self.loss(output, aux_output, label)
+                    # for mmd
+                    output, y = self.model(data, F.one_hot(label, num_classes=self.model.module.num_class), joint)
+                    # output, y = self.model(data, F.one_hot(label, num_classes=self.model.num_class))
+
+
+
+                    if arg.ema:
+                        self.model_ema.cuda(self.output_device)
+                        output_ema, z_ema = self.model_ema(data, F.one_hot(label, num_classes=self.model.module.num_class))
+                        # output_ema, z_ema = self.model_ema(data,
+                        #                                    F.one_hot(label, num_classes=self.model.num_class))
+                    loss = self.loss(output, label)
+                    if arg.ema:
+                        loss_ema = self.loss(output_ema, label)
+
                     score_frag.append(output.data.cpu().numpy())
                     loss_value.append(loss.data.item())
 
+                    if arg.ema:
+                        score_frag_ema.append(output_ema.data.cpu().numpy())
+                        loss_value_ema.append(loss_ema.data.item())
+
                     _, predict_label = torch.max(output.data, 1)
                     pred_list.append(predict_label.data.cpu().numpy())
+
+                    if arg.ema:
+                        _, predict_label_ema = torch.max(output_ema.data, 1)
+                        pred_list_ema.append(predict_label_ema.data.cpu().numpy())
+
                     step += 1
 
                 if wrong_file is not None or result_file is not None:
@@ -506,32 +627,68 @@ class Processor():
                             f_r.write(str(x) + ',' + str(true[i]) + '\n')
                         if x != true[i] and wrong_file is not None:
                             f_w.write(str(index[i]) + ',' + str(x) + ',' + str(true[i]) + '\n')
+
             score = np.concatenate(score_frag)
             loss = np.mean(loss_value)
+
+            if self.arg.ema:
+                score_ema = np.concatenate(score_frag_ema)
+                loss_ema = np.mean(loss_value_ema)
+
             if 'ucla' in self.arg.feeder:
                 self.data_loader[ln].dataset.sample_name = np.arange(len(score))
             accuracy = self.data_loader[ln].dataset.top_k(score, 1)
+
+            if self.arg.ema:
+                accuracy_ema = self.data_loader[ln].dataset.top_k(score_ema, 1)
+
             if accuracy > self.best_acc:
                 self.best_acc = accuracy
                 self.best_acc_epoch = epoch + 1
 
+            if self.arg.ema:
+                if accuracy_ema > self.best_acc_ema:
+                    self.best_acc_ema = accuracy_ema
+                    self.best_acc_epoch_ema = epoch + 1
+
             print('Accuracy: ', accuracy, ' model: ', self.arg.model_saved_name)
+            if self.arg.ema:
+                print('Accuracy_ema: ', accuracy, ' model_ema: ', self.arg.model_saved_name)
             if self.arg.phase == 'train':
                 self.val_writer.add_scalar('loss', loss, self.global_step)
                 self.val_writer.add_scalar('acc', accuracy, self.global_step)
+                if arg.ema:
+                    self.val_writer.add_scalar('loss_ema', loss_ema, self.global_step)
+                    self.val_writer.add_scalar('acc_ema', accuracy_ema, self.global_step)
 
             score_dict = dict(
                 zip(self.data_loader[ln].dataset.sample_name, score))
+            if self.arg.ema:
+                score_dict_ema = dict(
+                    zip(self.data_loader[ln].dataset.sample_name, score_ema))
             self.print_log('\tMean {} loss of {} batches: {}.'.format(
                 ln, len(self.data_loader[ln]), np.mean(loss_value)))
+            if self.arg.ema:
+                self.print_log('\tMean {} loss_ema of {} batches: {}.'.format(
+                    ln, len(self.data_loader[ln]), np.mean(loss_value_ema)))
             for k in self.arg.show_topk:
                 self.print_log('\tTop{}: {:.2f}%'.format(
                     k, 100 * self.data_loader[ln].dataset.top_k(score, k)))
+            if arg.ema:
+                for k in self.arg.show_topk:
+                    self.print_log('\tTop{}_ema: {:.2f}%'.format(
+                        k, 100 * self.data_loader[ln].dataset.top_k(score_ema, k)))
 
             if save_score:
                 with open('{}/epoch{}_{}_score.pkl'.format(
                         self.arg.work_dir, epoch + 1, ln), 'wb') as f:
                     pickle.dump(score_dict, f)
+
+            if arg.ema:
+                if save_score:
+                    with open('{}/epoch{}_{}_score_ema.pkl'.format(
+                            self.arg.work_dir, epoch + 1, ln), 'wb') as f:
+                        pickle.dump(score_dict_ema, f)
 
             # acc for each class:
             label_list = np.concatenate(label_list)
@@ -545,6 +702,19 @@ class Processor():
                 writer.writerow(each_acc)
                 writer.writerows(confusion)
 
+            if arg.ema:
+                # acc for each class:
+                label_list_ema = np.concatenate(label_list_ema)
+                pred_list_ema = np.concatenate(pred_list_ema)
+                confusion_ema = confusion_matrix(label_list_ema, pred_list_ema)
+                list_diag_ema = np.diag(confusion_ema)
+                list_raw_sum_ema = np.sum(confusion_ema, axis=1)
+                each_acc_ema = list_diag_ema / list_raw_sum_ema
+                with open('{}/epoch{}_{}_each_class_acc_ema.csv'.format(self.arg.work_dir, epoch + 1, ln), 'w') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(each_acc_ema)
+                    writer.writerows(confusion_ema)
+
     def start(self):
         if self.arg.phase == 'train':
             self.print_log('Parameters:\n{}\n'.format(str(vars(self.arg))))
@@ -556,8 +726,10 @@ class Processor():
                 save_model = (((epoch + 1) % self.arg.save_interval == 0) or (
                         epoch + 1 == self.arg.num_epoch)) and (epoch+1) > self.arg.save_epoch
 
+                # self.lr_scheduler.step(epoch)
                 self.train(epoch, save_model=save_model)
-
+                if self.arg.ema:
+                    ema_update(self.model, self.model_ema, itr=epoch)
                 self.eval(epoch, save_score=self.arg.save_score, loader_name=['test'])
 
             # test the best model
@@ -590,6 +762,15 @@ class Processor():
             wf = self.arg.weights.replace('.pt', '_wrong.txt')
             rf = self.arg.weights.replace('.pt', '_right.txt')
 
+            # mask = self.model.module.joint_label
+            #
+            # A = torch.tensor(self.model.module.graph.A).cuda(mask.device).float()
+            # A[A!=0] = 1
+            #
+            # ind = torch.argmax(mask, dim=0)
+            # print(ind)
+
+
             if self.arg.weights is None:
                 raise ValueError('Please appoint --weights.')
             self.arg.print_log = False
@@ -605,7 +786,7 @@ if __name__ == '__main__':
     p = parser.parse_args()
     if p.config is not None:
         with open(p.config, 'r') as f:
-            default_arg = yaml.load(f, Loader=yaml.FullLoader)
+            default_arg = yaml.safe_load(f) 
         key = vars(p).keys()
         for k in default_arg.keys():
             if k not in key:
@@ -614,7 +795,6 @@ if __name__ == '__main__':
         parser.set_defaults(**default_arg)
 
     arg = parser.parse_args()
-    arg.work_dir = arg.work_dir + '_CUDNN'
     init_seed(arg.seed)
     processor = Processor(arg)
     processor.start()
