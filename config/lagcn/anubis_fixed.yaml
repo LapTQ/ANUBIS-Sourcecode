@@ -1,0 +1,66 @@
+aux_weight: 0.2
+base_lr: 0.05
+batch_size: 1
+device:
+- 0
+eval_interval: 5
+feeder: feeders.feeder_anubis.Feeder
+log_interval: 100
+lr_decay_rate: 0.1
+model: model.lagcn.Model
+model_args:
+  examplar: graph.cls_examplar_anubis.CLSExamplar
+  examplar_args:
+    num_class: 102
+    num_point: 32
+    topo_str: what_will_[J]_act_like_when_[C]-with-punctuation
+  graph: graph.anubis.Graph
+  graph_args:
+    labeling_mode: spatial
+  num_class: 102
+  num_person: 2
+  num_point: 32
+nesterov: true
+num_epoch: 50
+num_worker: 0
+optimizer: SGD
+print_log: true
+save_epoch: 30
+save_interval: 5
+save_score: false
+seed: 2
+show_topk:
+- 1
+- 5
+step:
+- 30
+test_batch_size: 1
+test_feeder_args:
+  bone: false
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  debug: false
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+  p_interval:
+  - 0.95
+  use_mmap: true
+  vel: false
+  window_size: -1
+train_feeder_args:
+  bone: false
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy
+  debug: false
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  normalization: false
+  p_interval:
+  - 0.5
+  - 1
+  random_choose: false
+  random_move: false
+  random_rot: true
+  random_shift: false
+  use_mmap: true
+  vel: false
+  window_size: -1
+warm_up_epoch: 5
+weight_decay: 0.0004
+work_dir: ./work_dir/anubis/lagcn_joint
