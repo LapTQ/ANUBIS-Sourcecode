@@ -28,7 +28,7 @@ test_feeder_args:
   use_mmap: True
 
 # model
-model: model.lagcn.Model
+model: model.lagcn.lagcn.Model
 model_args:
   num_class: 102  
   num_point: 32    

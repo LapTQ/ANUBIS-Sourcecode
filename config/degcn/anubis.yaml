@@ -30,7 +30,7 @@ test_feeder_args:
   use_mmap: True
 
 # model
-model: model.degcn.Model
+model: model.degcn.degcn.Model
 model_args:
   num_class: 102
   num_point: 32  
@@ -47,7 +47,6 @@ weight_decay: 0.0004
 base_lr: 0.05
 step: [30]
 warm_up_epoch: 5
-cosine_epoch: 0
 num_worker: 0
 # training
 device: [0]
