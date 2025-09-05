@@ -82,7 +82,7 @@ def get_parser():
     parser.add_argument('-model_saved_name', default='')
     parser.add_argument(
         '--config',
-        default='config/degcn/anubis.yaml',
+        default='config/sttformer/anubis.yaml',
         help='path to the configuration file')
 
     # processor
