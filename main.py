@@ -82,7 +82,7 @@ def get_parser():
     parser.add_argument('-model_saved_name', default='')
     parser.add_argument(
         '--config',
-        default='config/sttformer/anubis.yaml',
+        default='config/skateformer/anubis.yaml',
         help='path to the configuration file')
 
     # processor
@@ -427,7 +427,7 @@ class Processor():
             try:
                 output, aux_output = self.model(data)
             except ValueError:
-                # 如果模型只返回一个输出
+                # å¦‚æžœæ¨¡åž‹åªè¿”å›žä¸€ä¸ªè¾“å‡º
                 output = self.model(data)
                 aux_output = None
             
