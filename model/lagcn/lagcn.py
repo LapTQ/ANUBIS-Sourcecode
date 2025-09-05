@@ -297,7 +297,7 @@ class TCN_GCN_unit(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, num_class=60, num_point=25, num_person=2, graph=None, graph_args=dict(), examplar=None, examplar_args=dict(), in_channels=3,
+    def __init__(self, num_class=102, num_point=32, num_person=2, graph=None, graph_args=dict(), examplar=None, examplar_args=dict(), in_channels=3,
                  drop_out=0, adaptive=True):
         super(Model, self).__init__()
 
@@ -309,8 +309,8 @@ class Model(nn.Module):
             Examplar = import_class(examplar)
             self.examplar = Examplar(**examplar_args)
 
-        A = self.graph.A # 3,25,25
-        self.examplar = nn.Parameter(torch.Tensor(self.examplar.A), requires_grad=False) # ncls, 25, 25
+        A = self.graph.A 
+        self.examplar = nn.Parameter(torch.Tensor(self.examplar.A), requires_grad=False) 
 
         self.num_class = num_class
         self.num_point = num_point

@@ -3,7 +3,8 @@ sys.path.insert(0, '')
 sys.path.extend(['../'])
 
 import numpy as np
-from graph import tools
+
+from graph.hdgcn_graph import tools
 
 num_node = 32
 self_link = [(i, i) for i in range(num_node)]
@@ -46,28 +47,24 @@ neighbor = inward + outward
 
 
 class Graph:
-    def __init__(self, labeling_mode='spatial', scale=1):
+    def __init__(self, labeling_mode='spatial', CoM=1):
+        A_original = tools.get_spatial_graph_original(num_node, self_link, inward, outward)
+        A = np.expand_dims(A_original, axis=0)  # shape: (1, 3, num_node, num_node)
+        self.A = (A, CoM)  # 确保返回元组
         self.num_node = num_node
         self.self_link = self_link
         self.inward = inward
         self.outward = outward
         self.neighbor = neighbor
-        self.A = self.get_adjacency_matrix(labeling_mode)
-        
-        # Hyperformer 
-        self.A_binary = tools.edge2mat(neighbor, num_node)
-        self.A_norm = tools.normalize_adjacency_matrix(self.A_binary + 2*np.eye(num_node))
-        self.A_binary_K = tools.get_k_scale_graph(scale, self.A_binary)
 
-
-    def get_adjacency_matrix(self, labeling_mode=None):
+    def get_adjacency_matrix(self, labeling_mode=None, CoM=1):
         if labeling_mode is None:
             return self.A
         if labeling_mode == 'spatial':
-            A = tools.get_spatial_graph(num_node, self_link, inward, outward)
+            A = tools.get_spatial_graph_original(num_node, self_link, inward, outward)
+            return np.expand_dims(A, axis=0), CoM  # 返回 (1, 3, V, V), CoM
         else:
             raise ValueError()
-        return A
 
 
 class AdjMatrixGraph:
@@ -75,8 +72,8 @@ class AdjMatrixGraph:
         self.edges = neighbor
         self.num_nodes = num_node
         self.self_loops = [(i, i) for i in range(self.num_nodes)]
-        self.A_binary = tools.edge2mat(self.edges, self.num_nodes)
-        self.A_binary_with_I = tools.edge2mat(self.edges + self.self_loops, self.num_nodes)
+        self.A_binary = tools.get_adjacency_matrix(self.edges, self.num_nodes)
+        self.A_binary_with_I = tools.get_adjacency_matrix(self.edges + self.self_loops, self.num_nodes)
         self.A = tools.normalize_adjacency_matrix(self.A_binary)
 
 
