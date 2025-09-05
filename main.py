@@ -82,7 +82,7 @@ def get_parser():
     parser.add_argument('-model_saved_name', default='')
     parser.add_argument(
         '--config',
-        default='config/hdgcn/anubis.yaml',
+        default='config/degcn/anubis.yaml',
         help='path to the configuration file')
 
     # processor
@@ -225,12 +225,12 @@ class WeightSumLoss(nn.Module):
     def __init__(self, weight=0.1):
         super().__init__()
         self.weight = weight
-
         self.loss = nn.CrossEntropyLoss()
-        self.aux_loss = nn.CrossEntropyLoss()
 
-    def forward(self, x, aux, label):
-        return self.loss(x, label) + self.weight * self.aux_loss(aux, label)
+    def forward(self, x, aux=None, label=None):
+        if aux is None:
+            return self.loss(x, label)
+        return self.loss(x, label) + self.weight * self.loss(aux, label)
 
 class Processor():
     """ 
@@ -424,8 +424,14 @@ class Processor():
             timer['dataloader'] += self.split_time()
 
             # forward
-            output, aux_output = self.model(data)
-            loss = self.loss(output, aux_output , label)
+            try:
+                output, aux_output = self.model(data)
+            except ValueError:
+                # 如果模型只返回一个输出
+                output = self.model(data)
+                aux_output = None
+            
+            loss = self.loss(output, aux_output, label)
             # backward
             self.optimizer.zero_grad()
             loss.backward()
@@ -479,8 +485,12 @@ class Processor():
                 with torch.no_grad():
                     data = data.float().cuda(self.output_device)
                     label = label.long().cuda(self.output_device)
-                    output, aux_output = self.model(data)
-                    loss = self.loss(output, aux_output , label)
+                    try:
+                        output, aux_output = self.model(data)
+                    except ValueError:
+                        output = self.model(data)
+                        aux_output = None
+                    loss = self.loss(output, aux_output, label)
                     score_frag.append(output.data.cpu().numpy())
                     loss_value.append(loss.data.item())
 
