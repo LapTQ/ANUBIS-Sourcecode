@@ -1,0 +1,53 @@
+work_dir: ./work_dir/21-09-13-trn_anu101_decouple-gcn
+
+# feeder
+feeder: feeders.feeder.Feeder
+train_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  debug: False
+
+test_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+  debug: False
+
+# model
+model: model.decouple_gcn.Model
+model_args:
+  in_channels: 3
+  num_class: 102
+  num_point: 32
+  num_person: 2
+  graph: graph.azure_kinect.Graph
+  groups: 16
+  graph_args:
+    labeling_mode: 'spatial'
+
+# optim
+weight_decay: 0.0005
+base_lr: 0.05
+step: [30]
+
+# training
+num_epoch: 50
+device: [0]  
+batch_size: 1 
+test_batch_size: 1
+nesterov: True
+
+
+to_add_onehot: False
+
+optimizer: Adam
+
+
+num_worker: 0  
+
+eval_start: 10
+eval_interval: 1
+
+additional_loss:
+  rank_pool: false
+  rank_pool_w: 0.1
+  rank_pool_start_epoch: 1
