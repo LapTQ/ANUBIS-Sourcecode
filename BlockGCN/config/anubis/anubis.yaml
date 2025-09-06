@@ -1,0 +1,54 @@
+work_dir: ./work_dir/anubis/xset/ctrgcn_joint
+
+# feeder
+feeder: feeders.feeder_anubis.Feeder
+train_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 300
+  normalization: False
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: True
+  bone: True
+  use_mmap: True
+
+test_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+  split: test
+  window_size: 300
+  p_interval: [0.95]
+  vel: True
+  bone: True
+  debug: False
+  use_mmap: True
+
+# model
+model: model.BlockGCN.Model
+model_args:
+  num_class: 102
+  num_point: 32
+  num_person: 2
+  graph: graph.anubis.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+
+#optim
+weight_decay: 0.0004
+base_lr: 0.05
+lr_decay_rate: 0.1
+step: [30]
+warm_up_epoch: 5
+
+# training
+device: [0]
+batch_size: 1
+test_batch_size: 1
+num_epoch: 50
+nesterov: True
