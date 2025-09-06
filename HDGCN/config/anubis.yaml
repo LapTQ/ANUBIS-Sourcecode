@@ -1,0 +1,48 @@
+num_worker: 0
+work_dir: ./work_dir/anubis/HD-GCN
+
+# feeder
+feeder: feeders.feeder_anubis.Feeder
+train_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: -1
+  normalization: False
+  random_rot: True
+  p_interval: [0.5, 1]
+  bone: False
+
+test_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+  window_size: -1
+  p_interval: [0.95]
+  bone: False
+  debug: False
+
+# model
+model: model.HDGCN.Model
+model_args:
+  num_class: 102
+  num_point: 32
+  num_person: 2
+  graph: graph.azure_kinect.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+    CoM: 1
+
+#optim
+weight_decay: 0.0004
+base_lr: 0.1
+warm_up_epoch: 5
+
+# training
+device: [0]
+batch_size: 10
+test_batch_size: 10
+num_epoch: 50
+nesterov: True
