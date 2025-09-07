@@ -95,6 +95,7 @@ python main.py --config ./config/anubis/anubis.yaml
 ```bash
 # Basic training command
 python main.py --config config/anubis/anubis.yaml
+```
 
 ### Custom Dataset
 To use a custom dataset, you need to:
@@ -103,34 +104,6 @@ To use a custom dataset, you need to:
 3. Update configuration files
 
 
-## 🤝 Contributing
-
-We welcome community contributions! Please follow these steps:
-
-1. **Fork** this repository
-2. **Create feature branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit changes** (`git commit -m 'Add some AmazingFeature'`)
-4. **Push to branch** (`git push origin feature/AmazingFeature`)
-5. **Create Pull Request**
-
-### Adding New Algorithms
-
-1. Create algorithm folder in project root
-2. Implement core files:
-   - `main.py`: Main program
-   - `model/`: Model definitions
-   - `config/`: Configuration files
-   - `README.md`: Algorithm description
-3. Update main README algorithm list
-4. Provide benchmark results
-
-### Code Style Guidelines
-
-- Follow PEP 8 for Python code
-- Use meaningful variable and function names
-- Add docstrings for classes and functions
-- Include type hints where appropriate
-- Write unit tests for new features
 
 ## 📚 Citation
 
