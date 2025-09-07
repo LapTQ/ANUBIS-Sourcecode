@@ -1,0 +1,59 @@
+
+work_dir: ./work_dir/anubis/22_02_22-2018_aaai_stgcn
+
+# Feeder
+feeder: feeders.feeder.Feeder
+train_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: -1
+  normalization: False
+
+test_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+  debug: False
+
+# Model
+model: model.st_gcn_2018_aaai.st_gcn.ST_GCN
+model_args:
+  in_channels: 3
+  num_class: 102
+  num_point: 32
+  num_person: 2
+  num_frames: 300
+  gcn_kernel_size: [9,3]
+  drop_prob: 0.5
+  graph_args:
+    layout: 'anubis'
+    strategy: 'spatial'
+    max_hop: 4
+
+# Optim
+weight_decay: 0.0005
+base_lr: 0.05
+step: [30]
+
+# Training
+num_epoch: 50
+device: [0]
+batch_size: 40
+forward_batch_size: 40
+test_batch_size: 40
+nesterov: True
+optimizer: SGD
+num_worker: 0
+# Input processing
+to_add_onehot: False
+
+# Pretrained models
+# weights: "work_dir/20-12-09-ntu120_xsub_only_sgcn/2020-12-09T07-59-11/weights/weights-10-7500.pt"
+# checkpoint: "work_dir/20-12-09-ntu120_xsub_only_sgcn/2020-12-09T07-59-11/checkpoints/checkpoint-10-fwbz42-7500.pt"
+# resume: True
+
+eval_start: 1
+eval_interval: 1
