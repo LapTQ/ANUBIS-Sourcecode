@@ -40,16 +40,6 @@ Anubis-benchmark/
 - **Python**: 3.6 or higher
 - **CUDA**: 10.2 or higher (recommended for GPU acceleration)
 
-### Core Dependencies
-- **PyTorch**: 1.7.0+
-- **torchvision**: 0.8.0+
-- **numpy**: 1.19.0+
-- **scipy**: 1.5.0+
-- **scikit-learn**: 0.23.0+
-- **matplotlib**: 3.3.0+
-- **tqdm**: 4.50.0+
-- **PyYAML**: 5.3.0+
-
 ## 🚀 Quick Start
 
 ### 1. Clone Repository
