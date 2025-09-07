@@ -54,7 +54,7 @@ class Graph:
         self.neighbor = neighbor
         self.A = self.get_adjacency_matrix(labeling_mode)
         
-        # Hyperformer 
+        # Hyperformer模型需要的额外属性
         self.A_binary = tools.edge2mat(neighbor, num_node)
         self.A_norm = tools.normalize_adjacency_matrix(self.A_binary + 2*np.eye(num_node))
         self.A_binary_K = tools.get_k_scale_graph(scale, self.A_binary)
@@ -75,8 +75,8 @@ class AdjMatrixGraph:
         self.edges = neighbor
         self.num_nodes = num_node
         self.self_loops = [(i, i) for i in range(self.num_nodes)]
-        self.A_binary = tools.edge2mat(self.edges, self.num_nodes)
-        self.A_binary_with_I = tools.edge2mat(self.edges + self.self_loops, self.num_nodes)
+        self.A_binary = tools.get_adjacency_matrix(self.edges, self.num_nodes)
+        self.A_binary_with_I = tools.get_adjacency_matrix(self.edges + self.self_loops, self.num_nodes)
         self.A = tools.normalize_adjacency_matrix(self.A_binary)
 
 
