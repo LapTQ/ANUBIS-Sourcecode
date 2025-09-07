@@ -1,0 +1,68 @@
+work_dir: workspace/skeleton/work_dir/hyperformer
+
+# feeder
+feeder: feeders.feeder_anubis.Feeder
+train_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: -1
+  normalization: False
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: False
+  bone: False
+  use_mmap: True
+
+test_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+  window_size: -1
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+  use_mmap: True
+
+# model
+model: model.Hyperformer.Model
+model_args:
+  num_class: 102  
+  num_point: 32   
+  num_person: 2   
+  graph: graph.anubis.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+  joint_label: [0, 0, 0, 5, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5]
+
+# optim
+weight_decay: 0.0004
+base_lr: 0.05
+lr_decay_rate: 0.1
+step: [110, 120]
+warm_up_epoch: 5
+
+# training
+device: [0]  
+batch_size: 1
+test_batch_size: 1
+num_epoch: 50
+nesterov: True
+num_worker: 0
+
+optimizer: SGD
+momentum: 0.9
+save_interval: 5
+save_epoch: 30
+eval_interval: 5
+print_log: True
+show_topk: [1, 5]
+seed: 2
+log_interval: 100
+save_score: False
+ema: False
+lambda_1: 1e-4
+lambda_2: 1e-1
