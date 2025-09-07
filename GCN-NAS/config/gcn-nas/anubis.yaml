@@ -1,0 +1,48 @@
+work_dir: ./work_dir/kinetics/agcn_joint_SrchCT
+model_saved_name: ./runs/ki_agcn_joint_SrchCT
+
+# feeder
+feeder: feeders.feeder_anubis.Feeder
+train_feeder_args:
+  random_choose: True
+  random_move: True
+  window_size: -1
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy  
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  debug: False
+
+test_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+
+# model
+#Reduce model
+#model: model.agcn2.Model2 
+#model CT
+#model: model.agcn.Model 
+#Searched model
+model: model.agcn3.Model
+
+model_args:
+  num_class: 102
+  num_person: 2
+  num_point: 32
+  graph: graph.anubis.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+
+#optim
+weight_decay: 0.0001
+base_lr: 0.05
+step: [30]
+
+# training
+device: [0]
+batch_size: 1
+test_batch_size: 1
+num_epoch: 50
+nesterov: True
+
+
+
+
