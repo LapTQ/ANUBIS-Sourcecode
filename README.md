@@ -4,7 +4,7 @@ A comprehensive benchmark suite for skeleton-based action recognition algorithms
 
 ## ✨ Features
 
-- 🔥 **14 State-of-the-Art Algorithms**: Integration of the most representative skeleton-based action recognition methods
+- 🔥 **15 State-of-the-Art Algorithms**: Integration of the most representative skeleton-based action recognition methods
 - 📊 **Unified Evaluation Framework**: Standardized training, testing, and evaluation pipeline
 - 🚀 **Efficient Implementation**: Optimized code implementations with GPU acceleration support
 - 📈 **Comprehensive Benchmarking**: Support for multiple mainstream datasets
