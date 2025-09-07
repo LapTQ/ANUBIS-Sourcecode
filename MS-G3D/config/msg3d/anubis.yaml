@@ -1,0 +1,38 @@
+
+work_dir: ./work_dir/kinetics/msg3d_joint
+
+# feeder
+feeder: feeders.feeder_anubis.Feeder
+train_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy  
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  debug: False
+  debug: False
+
+test_feeder_args:
+  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
+  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+
+# model
+model: model.msg3d.Model
+model_args:
+  num_class: 102
+  num_point: 32
+  num_person: 2
+  num_gcn_scales: 13
+  num_g3d_scales: 6
+  graph: graph.anubis.Graph 
+
+# optim
+# weight_decay: 0.0005
+weight_decay: 0.0003
+base_lr: 0.05
+step: [30]
+
+# training
+num_epoch: 50
+device: [0]
+batch_size: 1
+forward_batch_size: 1
+test_batch_size: 1
+nesterov: True
