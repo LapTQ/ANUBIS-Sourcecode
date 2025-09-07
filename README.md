@@ -80,13 +80,6 @@ python main.py --config ./config/anubis/anubis.yaml
 
 ## 🔧 Usage Guide
 
-
-### Training Models
-```bash
-# Basic training command
-python main.py --config config/anubis/anubis.yaml
-```
-
 ### Custom Dataset
 To use a custom dataset, you need to:
 1. Implement data feeder (`feeders/`)
