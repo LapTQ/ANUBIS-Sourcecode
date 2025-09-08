@@ -88,7 +88,8 @@ pip install -r requirements.txt
 ### 4. Data Preparation
 
 Download and process **Anubis dataset**, available at:
-👉 [HuggingFace Dataset Link](https://huggingface.co/datasets/Khat865/Anubis-skeleton)
+👉 [HuggingFace Dataset Link](https://huggingface.co/datasets/Khat865/Anubis-skeleton) 
+
 If you use our dataset, please cite our paper in your work.
 
 ### 5. Run Example
