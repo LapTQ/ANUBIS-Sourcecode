@@ -4,7 +4,11 @@
   <img src="anubis.png" alt="Anubis Benchmark" width="320"/>
 </p>
 
-<h1 align="center">Anubis Benchmark</h1>
+<h1 align="center">
+ANUBIS <br/>
+Skeleton-Based Action Recognition Benchmark
+</h1>
+
 
 <p align="center">A comprehensive benchmark suite for skeleton-based action recognition algorithms</p>
 
