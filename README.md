@@ -89,6 +89,7 @@ pip install -r requirements.txt
 
 Download and process **Anubis dataset**, available at:
 👉 [HuggingFace Dataset Link](https://huggingface.co/datasets/Khat865/Anubis-skeleton)
+If you use our dataset, please cite our paper in your work.
 
 ### 5. Run Example
 
@@ -110,7 +111,7 @@ To use a custom dataset, you need to:
 
 ## 📚 Citation
 
-If you find this benchmark useful in your research, please consider citing:
+If you find this benchmark or dataset useful in your research, please consider citing:
 
 ```bibtex
                     @misc{liu2025representationcentricsurveyskeletalaction,
