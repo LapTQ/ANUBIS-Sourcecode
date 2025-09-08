@@ -1,7 +1,7 @@
 # Anubis-benchmark
 
 <p align="center">
-  <img src="assets/logo.png" alt="Anubis Benchmark" width="600"/>
+  <img src="anubis.png" alt="Anubis Benchmark" width="600"/>
 </p>
 
 <p align="center">
