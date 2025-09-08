@@ -1,18 +1,21 @@
-# Anubis-benchmark
+# Anubis-Sourcecode
 
 <p align="center">
-  <img src="anubis.png" alt="Anubis Benchmark" width="600"/>
+  <img src="anubis.png" alt="Anubis Benchmark" width="320"/>
 </p>
 
+<h1 align="center">Anubis Benchmark</h1>
+
+<p align="center">A comprehensive benchmark suite for skeleton-based action recognition algorithms</p>
+
 <p align="center">
-  <a href="https://arxiv.org/abs/2205.02071" target="_blank"><img src="https://img.shields.io/badge/Paper-PDF-red?style=for-the-badge&logo=adobeacrobatreader" alt="Paper PDF"></a>
-  <a href="https://yliu1082.github.io/ANUBIS/" target="_blank"><img src="https://img.shields.io/badge/Paper-Website-blue?style=for-the-badge&logo=readthedocs" alt="Paper Website"></a>
-  <a href="https://huggingface.co/datasets/Khat865/Anubis-skeleton" target="_blank"><img src="https://img.shields.io/badge/Dataset-Link-green?style=for-the-badge&logo=googledrive" alt="Dataset"></a>
-  <a href="https://github.com/khat865/ANUBIS-Sourcecode" target="_blank"><img src="https://img.shields.io/badge/Code-GitHub-black?style=for-the-badge&logo=github" alt="Code"></a>
+  <a href="https://arxiv.org/abs/2205.02071">📄 Paper</a> •
+  <a href="https://yliu1082.github.io/ANUBIS/">🌐 Project Website</a> •
+  <a href="https://huggingface.co/datasets/Khat865/Anubis-skeleton">📊 Dataset</a> •
+  <a href="https://github.com/khat865/ANUBIS-Sourcecode">💻 Code</a>
 </p>
 
 ---
-
 A comprehensive benchmark suite for skeleton-based action recognition algorithms, featuring multiple state-of-the-art method implementations. This project aims to provide researchers with a unified evaluation platform for comparing different algorithms on skeleton-based action recognition tasks.
 
 ## ✨ Features
