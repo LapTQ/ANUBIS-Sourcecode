@@ -1,5 +1,3 @@
-# ANUBIS-Sourcecode
-
 <p align="center">
   <img src="anubis.png" alt="Anubis Benchmark" width="320"/>
 </p>
