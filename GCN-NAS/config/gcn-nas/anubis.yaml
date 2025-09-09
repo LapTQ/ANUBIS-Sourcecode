@@ -7,13 +7,13 @@ train_feeder_args:
   random_choose: True
   random_move: True
   window_size: -1
-  data_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy  
-  label_path: E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl
+  data_path: dataset/anubis/trn_data_all_action_front.npy  
+  label_path: dataset/anubis/trn_label_all_action_front.pkl
   debug: False
 
 test_feeder_args:
-  data_path: E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy
-  label_path: E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl
+  data_path: dataset/anubis/val_data_all_action_back.npy
+  label_path: dataset/anubis/val_label_all_action_back.pkl
 
 # model
 #Reduce model

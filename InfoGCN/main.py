@@ -99,8 +99,8 @@ class Processor():
         # 训练集配置
         if self.arg.phase == 'train':
             dt = Feeder(
-                data_path='E:/skletonbasedactionrecognition/dataset/anubis/trn_data_all_action_front.npy',
-                label_path='E:/skletonbasedactionrecognition/dataset/anubis/trn_label_all_action_front.pkl',
+                data_path='dataset/anubis/trn_data_all_action_front.npy',
+                label_path='dataset/anubis/trn_label_all_action_front.pkl',
                 split='train',
                 p_interval=[0.5, 1],
                 random_rot=self.arg.random_rot,
@@ -120,8 +120,8 @@ class Processor():
                 worker_init_fn=init_seed)
 
       
-        test_data_path = 'E:/skletonbasedactionrecognition/dataset/anubis/val_data_all_action_back.npy'
-        test_label_path = 'E:/skletonbasedactionrecognition/dataset/anubis/val_label_all_action_back.pkl'
+        test_data_path = 'dataset/anubis/val_data_all_action_back.npy'
+        test_label_path = 'dataset/anubis/val_label_all_action_back.pkl'
         
         self.data_loader['test'] = torch.utils.data.DataLoader(
             dataset=Feeder(

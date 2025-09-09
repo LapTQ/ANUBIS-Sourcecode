@@ -66,7 +66,7 @@ def get_parser():
     parser.add_argument('-model_saved_name', default='')
     parser.add_argument(
         '--config',
-        default='config/anubis/j.yaml',
+        default='2s-AGCN/config/anubis/j.yaml',
         help='path to the configuration file')
 
     # processor
