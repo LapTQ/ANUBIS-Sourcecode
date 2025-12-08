@@ -1,0 +1,49 @@
+work_dir: outputs/train/fs26/v212--satudora_veo3_awlrecord--split-14-class--nodistinct--max4769--12-kpts--b
+
+# feeder
+feeder: feeders.feeder_from_protogcn_format.Feeder
+train_feeder_args:
+  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/satudora_veo3_awlrecord--split-14-class--nodistinct--max4769/train.pkl
+  debug: False
+  layout: coco_headless
+  class_map: null
+  ske_feat: "b"
+
+test_feeder_args:
+  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/shoplift25min_satudoraR9--split-14-class--nodistinct/val.pkl
+  debug: False
+  layout: coco_headless
+  class_map: null
+  ske_feat: "b"
+  eval_metrics: "harmonic_mean_recall"    # acc harmonic_mean_recall
+
+# model
+model: model.lagcn.lagcn.Model
+model_args:
+  num_class: 14  
+  num_point: 12    
+  num_person: 1    
+  in_channels: 2
+  graph: graph.coco_headless.Graph  
+  graph_args:
+    labeling_mode: 'spatial'
+  examplar: graph.cls_examplar_coco_headless_v2.CLSExamplar  
+  examplar_args:
+    topo_str: null
+    num_class: 14
+    num_point: 12
+
+# optim
+weight_decay: 0.0004
+base_lr: 0.1
+lr_decay_rate: 0.1
+step: [10, 20, 30, 40] 
+warm_up_epoch: 5
+
+# training
+device: [0]  
+batch_size: 64
+test_batch_size: 64
+num_epoch: 60
+nesterov: True
+aux_weight: 0.2

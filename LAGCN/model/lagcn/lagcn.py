@@ -344,6 +344,8 @@ class Model(nn.Module):
         if len(x.shape) == 3:
             N, T, VC = x.shape
             x = x.view(N, T, self.num_point, -1).permute(0, 3, 1, 2).contiguous().unsqueeze(-1)
+        elif len(x.shape) == 4: # B, C, T, V
+            x = x.unsqueeze(-1)     # B, C, T, V, 1
         N, C, T, V, M = x.size()
 
         x = rearrange(x, 'n c t v m -> (n m t) v c', m=M, v=V).contiguous()
@@ -364,6 +366,8 @@ class Model(nn.Module):
         x = self.l7(x)
         x = self.l8(x)
         x = self.l9(x)
+
+        feat = x
 
         # N*M,C,T,V
         c_new = x.size(1)
@@ -386,4 +390,4 @@ class Model(nn.Module):
         x = x.mean(3).mean(1)
         x = self.drop_out(x)
 
-        return self.fc(x), aux_x
+        return self.fc(x), aux_x, feat.mean(dim=(2, 3))
