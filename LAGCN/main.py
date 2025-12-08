@@ -76,7 +76,6 @@ def get_parser():
         description='Spatial Temporal Graph Convolution Network')
     parser.add_argument(
         '--work-dir',
-        default='./work_dir/temp',
         help='the work folder for storing results')
 
     parser.add_argument('-model_saved_name', default='')
@@ -96,7 +95,7 @@ def get_parser():
 
     # visulize and debug
     parser.add_argument(
-        '--seed', type=int, default=1, help='random seed for pytorch')
+        '--seed', type=int, default=None, help='random seed for pytorch')
     parser.add_argument(
         '--log-interval',
         type=int,
@@ -135,7 +134,7 @@ def get_parser():
     parser.add_argument(
         '--num-worker',
         type=int,
-        default=8,
+        default=0,
         help='the number of worker for data loader')
     parser.add_argument(
         '--train-feeder-args',
@@ -219,6 +218,10 @@ def get_parser():
     parser.add_argument(
         '--force-rerun', type=str2bool, default=False, help='force rerun or not')
 
+    # laptq
+    parser.add_argument('--overwrite', action='store_true', default=False)
+    parser.add_argument('--id_model', type=int, default=1)
+
     return parser
 
 class WeightSumLoss(nn.Module):
@@ -244,17 +247,17 @@ class Processor():
             if not arg.train_feeder_args['debug']:
                 arg.model_saved_name = os.path.join(arg.work_dir, 'runs')
                 if os.path.isdir(arg.model_saved_name):
-                    print('log_dir: ', arg.model_saved_name, 'already exist')
-                    if arg.force_rerun:
-                        answer = 'y'
-                    else:
+                    if not self.arg.overwrite:
+                        print('log_dir: ', arg.model_saved_name, 'already exist')
                         answer = input('delete it? y/n:')
-                    if answer == 'y':
-                        shutil.rmtree(arg.model_saved_name)
-                        print('Dir removed: ', arg.model_saved_name)
-                        input('Refresh the website of tensorboard by pressing any keys')
+                        if answer == 'y':
+                            shutil.rmtree(arg.model_saved_name)
+                            print('Dir removed: ', arg.model_saved_name)
+                            input('Refresh the website of tensorboard by pressing any keys')
+                        else:
+                            print('Dir not removed: ', arg.model_saved_name)
                     else:
-                        print('Dir not removed: ', arg.model_saved_name)
+                        shutil.rmtree(arg.model_saved_name)
                 self.train_writer = SummaryWriter(os.path.join(arg.model_saved_name, 'train'), 'train')
                 self.val_writer = SummaryWriter(os.path.join(arg.model_saved_name, 'val'), 'val')
             else:
@@ -307,7 +310,7 @@ class Processor():
         shutil.copy2(inspect.getfile(Model), self.arg.work_dir)
         print(Model)
         self.model = Model(**self.arg.model_args)
-        print(self.model)
+        # print(self.model)
         self.loss = WeightSumLoss(weight=self.arg.aux_weight).cuda(output_device)
 
         if self.arg.weights:
@@ -414,7 +417,7 @@ class Processor():
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
         timer = dict(dataloader=0.001, model=0.001, statistics=0.001)
-        process = tqdm(loader, ncols=40)
+        process = tqdm(loader)
 
         for batch_idx, (data, label, index) in enumerate(process):
             self.global_step += 1
@@ -424,7 +427,7 @@ class Processor():
             timer['dataloader'] += self.split_time()
 
             # forward
-            output, aux_output = self.model(data)
+            output, aux_output, feat = self.model(data)
             loss = self.loss(output, aux_output , label)
             # backward
             self.optimizer.zero_grad()
@@ -458,7 +461,9 @@ class Processor():
             state_dict = self.model.state_dict()
             weights = OrderedDict([[k.split('module.')[-1], v.cpu()] for k, v in state_dict.items()])
 
-            torch.save(weights, self.arg.model_saved_name + '-' + str(epoch+1) + '-' + str(int(self.global_step)) + '.pt')
+            # torch.save(weights, self.arg.model_saved_name + '-' + str(epoch+1) + '-' + str(int(self.global_step)) + '.pt')
+            torch.save(weights,
+                        os.path.join(os.path.dirname(self.arg.model_saved_name), 'last.pt'))
 
     def eval(self, epoch, save_score=False, loader_name=['test'], wrong_file=None, result_file=None):
         if wrong_file is not None:
@@ -473,13 +478,13 @@ class Processor():
             label_list = []
             pred_list = []
             step = 0
-            process = tqdm(self.data_loader[ln], ncols=40)
+            process = tqdm(self.data_loader[ln])
             for batch_idx, (data, label, index) in enumerate(process):
                 label_list.append(label)
                 with torch.no_grad():
                     data = data.float().cuda(self.output_device)
                     label = label.long().cuda(self.output_device)
-                    output, aux_output = self.model(data)
+                    output, aux_output, feat = self.model(data)
                     loss = self.loss(output, aux_output , label)
                     score_frag.append(output.data.cpu().numpy())
                     loss_value.append(loss.data.item())
@@ -504,6 +509,12 @@ class Processor():
             if accuracy > self.best_acc:
                 self.best_acc = accuracy
                 self.best_acc_epoch = epoch + 1
+
+                # save best weight
+                state_dict = self.model.state_dict()
+                weights = OrderedDict([[k.split('module.')[-1], v.cpu()] for k, v in state_dict.items()])
+                torch.save(weights,
+                         os.path.join(os.path.dirname(self.arg.model_saved_name), 'best.pt'))
 
             print('Accuracy: ', accuracy, ' model: ', self.arg.model_saved_name)
             if self.arg.phase == 'train':
@@ -530,13 +541,14 @@ class Processor():
             list_diag = np.diag(confusion)
             list_raw_sum = np.sum(confusion, axis=1)
             each_acc = list_diag / list_raw_sum
-            with open('{}/epoch{}_{}_each_class_acc.csv'.format(self.arg.work_dir, epoch + 1, ln), 'w') as f:
-                writer = csv.writer(f)
-                writer.writerow(each_acc)
-                writer.writerows(confusion)
+            # with open('{}/epoch{}_{}_each_class_acc.csv'.format(self.arg.work_dir, epoch + 1, ln), 'w') as f:
+            #     writer = csv.writer(f)
+            #     writer.writerow(each_acc)
+            #     writer.writerows(confusion)
 
     def start(self):
         if self.arg.phase == 'train':
+            self.print_log('seed: {}'.format(self.arg.seed))
             self.print_log('Parameters:\n{}\n'.format(str(vars(self.arg))))
             self.global_step = self.arg.start_epoch * len(self.data_loader['train']) / self.arg.batch_size
             def count_parameters(model):
@@ -546,23 +558,23 @@ class Processor():
                 save_model = (((epoch + 1) % self.arg.save_interval == 0) or (
                         epoch + 1 == self.arg.num_epoch)) and (epoch+1) > self.arg.save_epoch
 
-                self.train(epoch, save_model=save_model)
+                self.train(epoch, save_model=True)
 
                 self.eval(epoch, save_score=self.arg.save_score, loader_name=['test'])
 
-            # test the best model
-            weights_path = glob.glob(os.path.join(self.arg.work_dir, 'runs-'+str(self.best_acc_epoch)+'*'))[0]
-            weights = torch.load(weights_path)
-            if type(self.arg.device) is list:
-                if len(self.arg.device) > 1:
-                    weights = OrderedDict([['module.'+k, v.cuda(self.output_device)] for k, v in weights.items()])
-            self.model.load_state_dict(weights)
+            # # test the best model
+            # weights_path = glob.glob(os.path.join(self.arg.work_dir, 'runs-'+str(self.best_acc_epoch)+'*'))[0]
+            # weights = torch.load(weights_path)
+            # if type(self.arg.device) is list:
+            #     if len(self.arg.device) > 1:
+            #         weights = OrderedDict([['module.'+k, v.cuda(self.output_device)] for k, v in weights.items()])
+            # self.model.load_state_dict(weights)
 
-            wf = weights_path.replace('.pt', '_wrong.txt')
-            rf = weights_path.replace('.pt', '_right.txt')
-            self.arg.print_log = False
-            self.eval(epoch=0, save_score=True, loader_name=['test'], wrong_file=wf, result_file=rf)
-            self.arg.print_log = True
+            # wf = weights_path.replace('.pt', '_wrong.txt')
+            # rf = weights_path.replace('.pt', '_right.txt')
+            # self.arg.print_log = False
+            # self.eval(epoch=0, save_score=True, loader_name=['test'], wrong_file=wf, result_file=rf)
+            # self.arg.print_log = True
 
 
             num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
@@ -604,7 +616,15 @@ if __name__ == '__main__':
         parser.set_defaults(**default_arg)
 
     arg = parser.parse_args()
-    arg.work_dir = arg.work_dir + '_CUDNN'
+
+    id_model = arg.id_model
+
+    arg.work_dir = os.path.join(arg.work_dir, f'model_{id_model}')
+    if arg.seed is None:
+        arg.seed = np.random.randint(2**31)
     init_seed(arg.seed)
-    processor = Processor(arg)
+    print("########################################################################")
+    print(f"#                            ROUND {id_model}                                 #")
+    print("########################################################################")
+    processor = Processor(arg) 
     processor.start()

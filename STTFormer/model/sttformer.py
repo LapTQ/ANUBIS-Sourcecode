@@ -72,7 +72,9 @@ class Model(nn.Module):
         x = x.permute(0, 1, 3, 2).contiguous().view(N, -1, self.out_channels, 1)
         x = self.drop_out2d(x)
         x = x.mean(3).mean(1)
+        
+        feat = x
 
         x = self.drop_out(x)
 
-        return self.fc(x)
+        return self.fc(x), feat

@@ -1,0 +1,126 @@
+work_dir: outputs/train/fs26/v262.10_classes.2s-15frames.bm.filter_dbscan_95
+
+# feeder
+feeder: feeders.feeder_from_txt.Feeder
+
+train_feeder_args:
+  split: train
+  layout: coco_headless
+  class_map: null
+  ske_feat: "bm"
+  debug: False
+  classes:
+    - "cho_tay_vao_tui_quan"
+    - "cho_tay_vao_tui_ao_tui_xach"
+    - "cho_tay_vao_gio_xe_hang"
+    - "cho_tay_vao_ke"
+    - "rut_tay_ve"
+    - "dung_yen"
+    - "ngoi_yen"
+    - "dung_day"
+    - "ngoi_xuong"
+    - "di"
+  train_data:
+    cho_tay_vao_tui_quan:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_tui_quan/train.x6.txt" # 5604
+    cho_tay_vao_tui_ao_tui_xach:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_tui_ao/train.txt" # 1101
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_tui_xach/train.txt" # 5535
+    cho_tay_vao_gio_xe_hang:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_gio_hang/train.txt" # 2954
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_xe_hang/train.txt" # 240
+    cho_tay_vao_ke:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_ke/train.sample_3000.txt" # 3000
+    rut_tay_ve:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_tui_quan/train.txt" # 142
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_tui_ao/train.txt" # 18
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_tui_xach/train.txt" # 67
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_gio_hang/train.txt" # 2784
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_xe_hang/train.txt" # 0
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_ke/train.filter_dbscan_95.sample_1500.txt" # 1500
+    dung_yen:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/dung_yen/train.sample_3000.txt" # 3000
+    ngoi_yen:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/ngoi_yen/train.sample_3000.txt" # 3000
+    dung_day:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/dung_day/train.x28.txt" # 2996
+    ngoi_xuong:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/ngoi_xuong/train.x70.txt" # 3010
+    di:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/di/train.sample_3000.txt" # 3000
+
+test_feeder_args:
+  split: val
+  layout: coco_headless
+  class_map: null
+  ske_feat: "bm"
+  eval_metrics: "macro_f1"    # acc harmonic_mean_recall recall_macro macro_f1
+  classes:
+    - "cho_tay_vao_tui_quan"
+    - "cho_tay_vao_tui_ao_tui_xach"
+    - "cho_tay_vao_gio_xe_hang"
+    - "cho_tay_vao_ke"
+    - "rut_tay_ve"
+    - "dung_yen"
+    - "ngoi_yen"
+    - "dung_day"
+    - "ngoi_xuong"
+    - "di"
+  val_data:
+    cho_tay_vao_tui_quan:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_tui_quan/val.txt" # 1304
+    cho_tay_vao_tui_ao_tui_xach:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_tui_ao/val.txt" # 1567
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_tui_xach/val.txt" # 6421
+    cho_tay_vao_gio_xe_hang:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_gio_hang/val.txt" # 2086
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_xe_hang/val.txt" # 0
+    cho_tay_vao_ke:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/cho_tay_vao_ke/val.txt" # 5887
+    rut_tay_ve:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_tui_quan/val.txt" # 0
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_tui_ao/val.txt" # 0
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_tui_xach/val.txt" # 0
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_gio_hang/val.txt" # 17
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_xe_hang/val.txt" # 0
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/rut_tay_khoi_ke/val.txt" # 8
+    dung_yen:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/dung_yen/val.txt" # 21125
+    ngoi_yen:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/ngoi_yen/val.txt" # 547
+    dung_day:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/dung_day/val.txt" # 1
+    ngoi_xuong:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/ngoi_xuong/val.txt" # 0
+    di:
+      - "mydata/processed/fs26/action_recognition/skeleton/action.for_skeleton.17_classes.2s_15frames/di/val.txt" # 36495
+
+# model
+model: model.lagcn.lagcn.Model
+model_args:
+  num_class: 10
+  num_point: 12
+  num_person: 1
+  in_channels: 2
+  graph: graph.coco_headless.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+  examplar: graph.cls_examplar_coco_headless_10_classes.CLSExamplar
+  examplar_args:
+    num_class: 10
+    num_point: 12
+
+# optim
+weight_decay: 0.0004
+base_lr: 0.1
+lr_decay_rate: 0.1
+step: [10, 20, 30, 40]
+warm_up_epoch: 5
+
+# training
+device: [0]
+batch_size: 128
+test_batch_size: 128
+num_epoch: 60
+nesterov: True
+aux_weight: 0.2
