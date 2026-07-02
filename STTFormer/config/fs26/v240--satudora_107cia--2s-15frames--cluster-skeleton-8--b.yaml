@@ -1,23 +1,23 @@
-work_dir: outputs/train/fs26/v221--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--jm
+work_dir: outputs/train/fs26/v240--satudora_107cia--2s-15frames--cluster-skeleton-8--b
 run_mode: train
 
 # feeder
 feeder: feeders.feeder_from_protogcn_format.Feeder
 train_feeder_args:
-  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/train.pkl
+  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/satudora_107cia--2s-15frames--cluster-skeleton-8/train.pkl
   debug: False
   layout: coco_headless
   class_map: null
-  ske_feat: "jm"
+  ske_feat: "b"
 
 test_feeder_args:
-  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/shoplift25min_satudoraR9--split-14-class--nodistinct--2s-15frames/val.pkl
+  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/shoplift25min_satudoraR9--2s-15frames--cluster-skeleton-8/val.pkl
   debug: False
   layout: coco_headless
   class_map: null
-  ske_feat: "jm"
-  eval_metrics: "harmonic_mean_recall"
-  class_weights: [1, 1, 1, 1, 1, 1, 1, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
+  ske_feat: "b"
+  eval_metrics: "harmonic_mean_recall"    # acc harmonic_mean_recall
+  class_weights: null #[1, 1, 1, 1, 1, 0, 0, 1]
 
 # model
 model: model.sttformer.Model
@@ -25,7 +25,7 @@ model_args:
   len_parts: 3
   num_frames: 15
   num_joints: 12   
-  num_classes: 14 
+  num_classes: 8
   num_heads: 3
   kernel_size: [3, 5]
   num_persons: 1

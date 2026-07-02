@@ -1,17 +1,17 @@
-work_dir: /home/laptq/laptq-fs26-shoplifting-detection/runs/STTFormer/fs26/v222--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--bm
+work_dir: outputs/train/fs26/v222--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--bm
 run_mode: train
 
 # feeder
 feeder: feeders.feeder_from_protogcn_format.Feeder
 train_feeder_args:
-  data_path: /home/laptq/laptq-fs26-shoplifting-detection/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/train.pkl
+  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/train.pkl
   debug: False
   layout: coco_headless
   class_map: null
   ske_feat: "bm"
 
 test_feeder_args:
-  data_path: /home/laptq/laptq-fs26-shoplifting-detection/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/shoplift25min_satudoraR9--split-14-class--nodistinct--2s-15frames/val.pkl
+  data_path: /home/laptq/ProtoGCN/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/shoplift25min_satudoraR9--split-14-class--nodistinct--2s-15frames/val.pkl
   debug: False
   layout: coco_headless
   class_map: null
