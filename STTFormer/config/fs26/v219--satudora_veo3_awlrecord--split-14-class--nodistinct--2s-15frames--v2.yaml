@@ -1,0 +1,52 @@
+work_dir: /home/laptq/laptq-fs26-shoplifting-detection/runs/STTFormer/fs26/v219--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2
+run_mode: train
+
+# feeder
+feeder: feeders.feeder_from_protogcn_format.Feeder
+train_feeder_args:
+  data_path: /home/laptq/laptq-fs26-shoplifting-detection/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/train.pkl
+  debug: False
+  layout: coco_headless
+  class_map: null
+  ske_feat: "j"
+
+test_feeder_args:
+  data_path: /home/laptq/laptq-fs26-shoplifting-detection/outputs/convert_pkl_STGCN_to_ProtoGCN/fs26/shoplift25min_satudoraR9--split-14-class--nodistinct--2s-15frames/val.pkl
+  debug: False
+  layout: coco_headless
+  class_map: null
+  ske_feat: "j"
+  eval_metrics: "harmonic_mean_recall"
+  class_weights: [1, 1, 1, 1, 1, 1, 1, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
+
+# model
+model: model.sttformer.Model
+model_args:
+  len_parts: 3
+  num_frames: 15
+  num_joints: 12   
+  num_classes: 14 
+  num_heads: 3
+  kernel_size: [3, 5]
+  num_persons: 1
+  num_channels: 2
+  use_pes: True
+  config: [[64,  64,  16], [64,  64,  16], 
+           [64,  128, 32], [128, 128, 32],
+           [128, 256, 64], [256, 256, 64], 
+           [256, 256, 64], [256, 256, 64]]
+
+# optim
+weight_decay: 0.0004
+base_lr: 0.05  
+lr_decay_rate: 0.1
+step: [30]  
+warm_up_epoch: 5
+
+# training
+device: [0]  
+batch_size: 64  
+test_batch_size: 64
+num_epoch: 60
+nesterov: True
+num_worker: 4 

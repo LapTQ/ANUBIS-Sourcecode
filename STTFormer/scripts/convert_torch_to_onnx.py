@@ -9,29 +9,30 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from collections import OrderedDict
 
-from model.lagcn.lagcn import Model
+from model.sttformer import Model
 
 model_paths = OrderedDict(
     [
         (
             "j",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v219--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/model_8/best.pt",
+            "outputs/train/fs26/STTFormer/v219--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/model_0/best.pt",
         ),
         (
             "b",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v220--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--b/model_5/best.pt",
+            "outputs/train/fs26/STTFormer/v220--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--b/model_0/best.pt",
         ),
         (
             "jm",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v221--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--jm/model_7/best.pt",
+            "outputs/train/fs26/STTFormer/v221--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--jm/model_0/best.pt",
         ),
         (
             "bm",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v222--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--bm/model_2/best.pt",
+            "outputs/train/fs26/STTFormer/v222--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--bm/model_0/best.pt",
         ),
     ]
 )
-pathf_output = "/home/laptq/laptq-fs26-shoplifting-detection/outputs/convert-torch-to-onnx/fs26/LAGCN/{}.onnx".format(
+
+pathf_output = "outputs/convert-torch-to-onnx/fs26/STTFormer/{}.onnx".format(
     "--".join(
         [
             "{}-{}".format(path.split("/")[-3].split("--")[0], key)
@@ -43,25 +44,38 @@ pathf_output = "/home/laptq/laptq-fs26-shoplifting-detection/outputs/convert-tor
 ls_models = OrderedDict()
 for key, model_path in model_paths.items():
     model = Model(
-        num_class=14,
-        num_point=12,
-        num_person=1,
-        in_channels=2,
-        graph="graph.coco_headless.Graph",
-        graph_args=dict(labeling_mode="spatial"),
-        examplar="graph.cls_examplar_coco_headless_v2.CLSExamplar",
-        examplar_args=dict(
-            topo_str=None,
-            num_class=14,
-            num_point=12,
-        ),
+        len_parts=3,
+        num_classes=14,
+        num_joints=12,
+        num_frames=15,
+        num_heads=3,
+        num_persons=1,
+        num_channels=2,
+        kernel_size=[3, 5],
+        use_pes=True,
+        config=[
+            [64, 64, 16],
+            [64, 64, 16],
+            [64, 128, 32],
+            [128, 128, 32],
+            [128, 256, 64],
+            [256, 256, 64],
+            [256, 256, 64],
+            [256, 256, 64],
+        ],
     )
 
-    weights = torch.load(model_path)
-    weights = OrderedDict([[k.split("module.")[-1], v] for k, v in weights.items()])
-    model.load_state_dict(weights)
+    if os.path.exists(model_path):
+        weights = torch.load(model_path)
+        weights = OrderedDict([[k.split("module.")[-1], v] for k, v in weights.items()])
+        model.load_state_dict(weights)
+    else:
+        print(
+            f"Warning: Model weights not found at {model_path}. Proceeding with random init."
+        )
     model.eval()
     ls_models[key] = model
+
 
 bone_pairs = (
     (0, 1),
@@ -89,35 +103,38 @@ class EnsembleModel(nn.Module):
 
     def forward(self, x):
         B, C, T, V = x.shape
-
-        x_j = x
+        x_j = x.unsqueeze(-1)  # N C T V M
 
         x_b = torch.zeros_like(x_j)
         for v1, v2 in bone_pairs:
-            x_b[..., v1] = x_j[..., v1] - x_j[..., v2]
+            x_b[..., v1, 0] = x_j[..., v1, 0] - x_j[..., v2, 0]
 
         x_jm = torch.zeros_like(x_j)
-        x_jm[..., : T - 1, :] = x_j[..., 1:, :] - x_j[..., : T - 1, :]
+        x_jm[..., : T - 1, :, :] = x_j[..., 1:, :, :] - x_j[..., : T - 1, :, :]
 
         x_bm = torch.zeros_like(x_b)
-        x_bm[..., : T - 1, :] = x_b[..., 1:, :] - x_b[..., : T - 1, :]
+        x_bm[..., : T - 1, :, :] = x_b[..., 1:, :, :] - x_b[..., : T - 1, :, :]
 
         if self.model_j is not None:
-            output_j, _, feat_j = self.model_j(x_j)
+            output_j, feat_j = self.model_j(x_j)
         else:
             output_j, feat_j = None, None
+
         if self.model_b is not None:
-            output_b, _, feat_b = self.model_b(x_b)
+            output_b, feat_b = self.model_b(x_b)
         else:
             output_b, feat_b = None, None
+
         if self.model_jm is not None:
-            output_jm, _, feat_jm = self.model_jm(x_jm)
+            output_jm, feat_jm = self.model_jm(x_jm)
         else:
             output_jm, feat_jm = None, None
+
         if self.model_bm is not None:
-            output_bm, _, feat_bm = self.model_bm(x_bm)
+            output_bm, feat_bm = self.model_bm(x_bm)
         else:
             output_bm, feat_bm = None, None
+
         return [
             i
             for p in [
@@ -137,7 +154,6 @@ dummy_input_shape = (5, 2, 15, 12)
 B, C, T, V = dummy_input_shape
 dummy_keypoint = torch.randn(dummy_input_shape)
 
-# Example inputs
 example_inputs = (dummy_keypoint,)
 
 os.makedirs(os.path.dirname(pathf_output), exist_ok=True)
@@ -148,7 +164,6 @@ output_names = [
     for it in p
 ]
 
-# Export to ONNX
 torch.onnx.export(
     model,
     example_inputs,
@@ -171,8 +186,6 @@ torch.onnx.export(
 )
 
 print("Model exported to {}".format(pathf_output))
-
-# --minShapes=input1:1x2x16x12x1,input2:16 --optShapes=input1:16x2x16x12x1,input2:16 --maxShapes=input1:32x2x16x12x1,input2:16 --shapes=input1:5x2x16x12x1,input2:16
 
 import numpy as np
 import onnx

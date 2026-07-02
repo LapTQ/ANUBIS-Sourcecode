@@ -58,7 +58,7 @@ def get_parser():
 
     # visulize and debug
     parser.add_argument('--save_epoch', type=int, default=80, help='the start epoch to save model (#iteration)')
-    parser.add_argument('--eval_interval', type=int, default=5, help='the interval for evaluating models (#iteration)')
+    parser.add_argument('--eval_interval', type=int, default=1, help='the interval for evaluating models (#iteration)')
     parser.add_argument('--print_log', type=str2bool, default=True, help='print logging or not')
     parser.add_argument('--show_topk', type=int, default=[1, 5], nargs='+', help='which Top K accuracy will be shown')
 
@@ -86,6 +86,9 @@ def get_parser():
     parser.add_argument('--test_batch_size', type=int, default=256, help='test batch size')
     parser.add_argument('--start_epoch', type=int, default=0, help='start training from which epoch')
     parser.add_argument('--num_epoch', type=int, default=80, help='stop training in which epoch')
+    parser.add_argument('--overwrite', action='store_true', default=False, help='overwrite log_dir')
+    parser.add_argument('--id_model', type=int, default=0, help='model id for ensembling')
+    parser.add_argument('--seed', type=int, default=None, help='random seed')
     parser.add_argument('--weight_decay', type=float, default=0.0005, help='weight decay for optimizer')
     parser.add_argument('--lr_decay_rate', type=float, default=0.1, help='decay rate for learning rate')
     parser.add_argument('--warm_up_epoch', type=int, default=5)
@@ -145,14 +148,17 @@ class Processor():
             result_visual = os.path.join(arg.work_dir, 'runs')
             if not arg.train_feeder_args['debug']:
                 if os.path.isdir(result_visual):
-                    print('log_dir: ', result_visual, 'already exist')
-                    answer = input('delete it? y/n:')
-                    if answer == 'y':
-                        shutil.rmtree(result_visual)
-                        print('Dir removed: ', result_visual)
-                        input('Refresh the website of tensorboard by pressing any keys')
+                    if not self.arg.overwrite:
+                        print('log_dir: ', result_visual, 'already exist')
+                        answer = input('delete it? y/n:')
+                        if answer == 'y':
+                            shutil.rmtree(result_visual)
+                            print('Dir removed: ', result_visual)
+                            input('Refresh the website of tensorboard by pressing any keys')
+                        else:
+                            print('Dir not removed: ', result_visual)
                     else:
-                        print('Dir not removed: ', result_visual)
+                        shutil.rmtree(result_visual)
                 self.train_writer = SummaryWriter(os.path.join(result_visual, 'train'), 'train')
                 self.val_writer = SummaryWriter(os.path.join(result_visual, 'val'), 'val')
                 
@@ -284,7 +290,7 @@ class Processor():
                 label = label.long().cuda(self.output_device)
 
             # forward
-            output = self.model(data)
+            output, feat = self.model(data)
             loss = self.loss(output, label)
             # backward
             self.optimizer.zero_grad()
@@ -306,10 +312,10 @@ class Processor():
         self.print_log('training: epoch: {}, loss: {:.4f}, top1: {:.2f}%, lr: {:.6f}'.format(
             epoch + 1, losses.avg, top1.avg, self.lr))
 
-        if  epoch + 1 == self.arg.num_epoch:
+        if  save_model:
             state_dict = self.model.state_dict()
             weights = OrderedDict([[k.split('module.')[-1], v.cpu()] for k, v in state_dict.items()])
-            torch.save(weights, self.arg.work_dir + '/' + self.arg.work_dir.split('/')[-1] + '.pt')
+            torch.save(weights, os.path.join(self.arg.work_dir, 'last.pt'))
 
     def eval(self, epoch, save_score=False, loader_name=['test'], wrong_file=None, result_file=None):
         losses = AverageMeter()
@@ -330,7 +336,7 @@ class Processor():
                 with torch.no_grad():
                     data = data.float().cuda(self.output_device)
                     label = label.long().cuda(self.output_device)
-                    output = self.model(data)
+                    output, feat = self.model(data)
                     loss = self.loss(output, label)
                     
                     score_frag.append(output.data.cpu().numpy())
@@ -358,7 +364,12 @@ class Processor():
                 self.val_writer.add_scalar('loss', top1.avg, self.global_step)
                 self.val_writer.add_scalar('acc', losses.avg, self.global_step)
 
-            self.best_acc = top1.avg if top1.avg > self.best_acc else self.best_acc
+            if top1.avg > self.best_acc:
+                self.best_acc = top1.avg
+                # save best weight
+                state_dict = self.model.state_dict()
+                weights = OrderedDict([[k.split('module.')[-1], v.cpu()] for k, v in state_dict.items()])
+                torch.save(weights, os.path.join(self.arg.work_dir, 'best.pt'))
         
             self.print_log('evaluating: loss: {:.4f}, top1: {:.2f}%, best_acc: {:.2f}%'.format(losses.avg, top1.avg, self.best_acc))
 
@@ -383,7 +394,7 @@ class Processor():
 
             for epoch in range(self.arg.start_epoch, self.arg.num_epoch):
 
-                save_model = (epoch + 1 == self.arg.num_epoch)
+                save_model = True
                 self.train(epoch, save_model=save_model)
 
                 if ((epoch + 1) % self.arg.eval_interval == 0):
@@ -422,7 +433,16 @@ if __name__ == '__main__':
         parser.set_defaults(**default_arg)
 
     arg = parser.parse_args()
-    os.environ['CUDA_VISIBLE_DEVICES'] = arg.cuda_visible_device
-    init_seed(1)
+    id_model = arg.id_model
+    arg.work_dir = os.path.join(arg.work_dir, f'model_{id_model}')
+    if arg.seed is None:
+        arg.seed = np.random.randint(2**31)
+
+    init_seed(arg.seed)
+
+    print("########################################################################")
+    print(f"#                            ROUND {id_model}           #")
+    print("########################################################################")
+
     processor = Processor(arg)
     processor.start()
