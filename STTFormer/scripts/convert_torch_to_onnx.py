@@ -15,24 +15,24 @@ model_paths = OrderedDict(
     [
         (
             "j",
-            "outputs/train/fs26/STTFormer/v219--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/model_0/best.pt",
+            "outputs/train/fs26/STTFormer/v239--satudora_107cia--2s-15frames--cluster-skeleton-8--j.old/model_0/best.pt",
         ),
-        (
-            "b",
-            "outputs/train/fs26/STTFormer/v220--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--b/model_0/best.pt",
-        ),
-        (
-            "jm",
-            "outputs/train/fs26/STTFormer/v221--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--jm/model_0/best.pt",
-        ),
-        (
-            "bm",
-            "outputs/train/fs26/STTFormer/v222--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--bm/model_0/best.pt",
-        ),
+        # (
+        #     "b",
+        #     "outputs/train/fs26/STTFormer/v240--satudora_107cia--2s-15frames--cluster-skeleton-8--b.old/model_0/best.pt",
+        # ),
+        # (
+        #     "jm",
+        #     "outputs/train/fs26/STTFormer/v241--satudora_107cia--2s-15frames--cluster-skeleton-8--jm.old/model_0/best.pt",
+        # ),
+        # (
+        #     "bm",
+        #     "outputs/train/fs26/STTFormer/v242--satudora_107cia--2s-15frames--cluster-skeleton-8--bm.old/model_0/best.pt",
+        # ),
     ]
 )
 
-pathf_output = "outputs/convert-torch-to-onnx/fs26/STTFormer/{}.onnx".format(
+pathf_output = "outputs/convert-torch-to-onnx/fs26/{}.onnx".format(
     "--".join(
         [
             "{}-{}".format(path.split("/")[-3].split("--")[0], key)
@@ -45,7 +45,7 @@ ls_models = OrderedDict()
 for key, model_path in model_paths.items():
     model = Model(
         len_parts=3,
-        num_classes=14,
+        num_classes=8,
         num_joints=12,
         num_frames=15,
         num_heads=3,
@@ -138,10 +138,22 @@ class EnsembleModel(nn.Module):
         return [
             i
             for p in [
-                [output_j, feat_j],
-                [output_b, feat_b],
-                [output_jm, feat_jm],
-                [output_bm, feat_bm],
+                [
+                    output_j, 
+                    # feat_j,
+                ],
+                [
+                    output_b, 
+                    # feat_b,
+                ],
+                [
+                    output_jm, 
+                    # feat_jm,
+                ],
+                [
+                    output_bm, 
+                    # feat_bm,
+                ],
             ]
             for i in p
             if p[0] is not None
@@ -160,7 +172,11 @@ os.makedirs(os.path.dirname(pathf_output), exist_ok=True)
 
 output_names = [
     it
-    for p in [(f"output_{key}", f"feat_{key}") for key in ls_models.keys()]
+    for p in [
+        (
+            f"output_{key}", 
+            # f"feat_{key}",
+        ) for key in ls_models.keys()]
     for it in p
 ]
 
