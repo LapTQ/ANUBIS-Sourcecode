@@ -15,19 +15,19 @@ model_paths = OrderedDict(
     [
         (
             "j",
-            "outputs/train/fs26/STTFormer/v239--satudora_107cia--2s-15frames--cluster-skeleton-8--j.old/model_0/best.pt",
+            "outputs/train/fs26/v239--satudora_107cia--2s-15frames--cluster-skeleton-8--j.old/model_0/best.pt",
         ),
         # (
         #     "b",
-        #     "outputs/train/fs26/STTFormer/v240--satudora_107cia--2s-15frames--cluster-skeleton-8--b.old/model_0/best.pt",
+        #     "outputs/train/fs26/v240--satudora_107cia--2s-15frames--cluster-skeleton-8--b.old/model_0/best.pt",
         # ),
         # (
         #     "jm",
-        #     "outputs/train/fs26/STTFormer/v241--satudora_107cia--2s-15frames--cluster-skeleton-8--jm.old/model_0/best.pt",
+        #     "outputs/train/fs26/v241--satudora_107cia--2s-15frames--cluster-skeleton-8--jm.old/model_0/best.pt",
         # ),
         # (
         #     "bm",
-        #     "outputs/train/fs26/STTFormer/v242--satudora_107cia--2s-15frames--cluster-skeleton-8--bm.old/model_0/best.pt",
+        #     "outputs/train/fs26/v242--satudora_107cia--2s-15frames--cluster-skeleton-8--bm.old/model_0/best.pt",
         # ),
     ]
 )
