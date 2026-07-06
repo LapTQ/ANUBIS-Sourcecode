@@ -319,8 +319,6 @@ class Processor():
 
     def eval(self, epoch, save_score=False, loader_name=['test'], wrong_file=None, result_file=None):
         losses = AverageMeter()
-        top1 = AverageMeter()
-        top5 = AverageMeter()
 
         if wrong_file is not None:
             f_w = open(wrong_file, 'w')
@@ -343,9 +341,6 @@ class Processor():
                     _, predict_label = torch.max(output.data, 1)
                     pred_list.append(predict_label.data.cpu().numpy())
 
-                prec1, prec5 = accuracy(output.data, label, topk=(1, 5))
-                top1.update(prec1.item(), data.size(0))
-                top5.update(prec5.item(), data.size(0))
                 losses.update(loss.item())
 
                 if wrong_file is not None or result_file is not None:
@@ -358,20 +353,21 @@ class Processor():
                             f_w.write(str(sampie[i]) + ',' + str(x) + ',' + str(true[i]) + '\n')
 
             score = np.concatenate(score_frag)
+            accuracy = self.data_loader[ln].dataset.top_k(score, 1)
             score_dict = dict(zip(self.data_loader[ln].dataset.sample_name, score))
 
             if self.arg.run_mode == 'train':
-                self.val_writer.add_scalar('loss', top1.avg, self.global_step)
-                self.val_writer.add_scalar('acc', losses.avg, self.global_step)
+                self.val_writer.add_scalar('loss', losses.avg, self.global_step)
+                self.val_writer.add_scalar('acc', accuracy, self.global_step)
 
-            if top1.avg > self.best_acc:
-                self.best_acc = top1.avg
+            if accuracy > self.best_acc:
+                self.best_acc = accuracy
                 # save best weight
                 state_dict = self.model.state_dict()
                 weights = OrderedDict([[k.split('module.')[-1], v.cpu()] for k, v in state_dict.items()])
                 torch.save(weights, os.path.join(self.arg.work_dir, 'best.pt'))
         
-            self.print_log('evaluating: loss: {:.4f}, top1: {:.2f}%, best_acc: {:.2f}%'.format(losses.avg, top1.avg, self.best_acc))
+            self.print_log('evaluating: loss: {:.4f}, accuracy: {:.2f}%, best_acc: {:.2f}%'.format(losses.avg, accuracy, self.best_acc))
 
             if save_score:
                 with open('{}/score.pkl'.format(self.arg.work_dir), 'wb') as f:

@@ -529,8 +529,8 @@ def harmonic_mean_recall(y_true, y_pred, **kwargs):
     assert len(class_weights) == len(per_class_recall), f"Number of weights ({len(class_weights)}) must match number of classes ({len(per_class_recall)})"
     
     # (If a class has 0 recall but weight is 0, we can safely ignore it)
-    # if np.any((per_class_recall == 0) & (class_weights > 0)):
-    #     return 0.0
+    if np.any((per_class_recall == 0) & (class_weights > 0)):
+        return 0.0
 
     # We only compute for classes where weight > 0 to avoid division by zero errors
     # or 0/0 ambiguity for ignored classes.

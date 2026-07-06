@@ -15,20 +15,20 @@ model_paths = OrderedDict(
     [
         (
             "j",
-            "outputs/train/fs26/v239--satudora_107cia--2s-15frames--cluster-skeleton-8--j.old/model_0/best.pt",
+            "outputs/train/fs26/v219--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/model_1/best.pt",
         ),
-        # (
-        #     "b",
-        #     "outputs/train/fs26/v240--satudora_107cia--2s-15frames--cluster-skeleton-8--b.old/model_0/best.pt",
-        # ),
-        # (
-        #     "jm",
-        #     "outputs/train/fs26/v241--satudora_107cia--2s-15frames--cluster-skeleton-8--jm.old/model_0/best.pt",
-        # ),
-        # (
-        #     "bm",
-        #     "outputs/train/fs26/v242--satudora_107cia--2s-15frames--cluster-skeleton-8--bm.old/model_0/best.pt",
-        # ),
+        (
+            "b",
+            "outputs/train/fs26/v220--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--b/model_0/best.pt",
+        ),
+        (
+            "jm",
+            "outputs/train/fs26/v221--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--jm/model_5/best.pt",
+        ),
+        (
+            "bm",
+            "outputs/train/fs26/v222--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--bm/model_0/best.pt",
+        ),
     ]
 )
 
@@ -45,7 +45,7 @@ ls_models = OrderedDict()
 for key, model_path in model_paths.items():
     model = Model(
         len_parts=3,
-        num_classes=8,
+        num_classes=14,
         num_joints=12,
         num_frames=15,
         num_heads=3,
@@ -194,8 +194,7 @@ torch.onnx.export(
         },
         **{
             it: {0: "batch_size"}
-            for p in [(f"output_{key}", f"feat_{key}") for key in ls_models.keys()]
-            for it in p
+            for it in output_names
         },
     },
     opset_version=12,
