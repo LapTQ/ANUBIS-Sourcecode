@@ -367,7 +367,7 @@ class Processor():
                 weights = OrderedDict([[k.split('module.')[-1], v.cpu()] for k, v in state_dict.items()])
                 torch.save(weights, os.path.join(self.arg.work_dir, 'best.pt'))
         
-            self.print_log('evaluating: loss: {:.4f}, accuracy: {:.2f}%, best_acc: {:.2f}%'.format(losses.avg, accuracy, self.best_acc))
+            self.print_log('evaluating: loss: {:.4f}, accuracy: {:.2f}%, best_acc: {:.2f}%'.format(losses.avg, accuracy * 100, self.best_acc * 100))
 
             if save_score:
                 with open('{}/score.pkl'.format(self.arg.work_dir), 'wb') as f:
