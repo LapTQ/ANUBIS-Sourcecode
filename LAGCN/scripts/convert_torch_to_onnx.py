@@ -1,68 +1,78 @@
+import torch
+from torch import nn
 import os
 import sys
 from pathlib import Path
 
-import torch
-from torch import nn
-
 sys.path.append(str(Path(__file__).parent.parent))
 
 from collections import OrderedDict
-
 from model.lagcn.lagcn import Model
 
+# Configure the models to convert here.
+# For single model conversion, just provide one item in the OrderedDict.
+# For ensemble conversion, provide multiple items.
 model_paths = OrderedDict(
     [
         (
             "j",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v219--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2/model_8/best.pt",
+            "mymodels/checkpoints/fs26/action_recognition/LAGCN/v259.10_classes.2s-15frames.j.filter_dbscan_95/model_0/best.pt",
         ),
         (
             "b",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v220--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--b/model_5/best.pt",
+            "mymodels/checkpoints/fs26/action_recognition/LAGCN/v260.10_classes.2s-15frames.b.filter_dbscan_95/model_0/best.pt",
         ),
-        (
-            "jm",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v221--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--jm/model_7/best.pt",
-        ),
-        (
-            "bm",
-            "/home/laptq/laptq-fs26-shoplifting-detection/runs/LAGCN/fs26/v222--satudora_veo3_awlrecord--split-14-class--nodistinct--2s-15frames--v2--bm/model_2/best.pt",
-        ),
+        # (
+        #     "jm",
+        #     "mymodels/checkpoints/fs26/action_recognition/LAGCN/v261.10_classes.2s-15frames.jm.filter_dbscan_95/model_0/best.pt",
+        # ),
+        # (
+        #     "bm",
+        #     "mymodels/checkpoints/fs26/action_recognition/LAGCN/v262.10_classes.2s-15frames.bm.filter_dbscan_95/model_0/best.pt",
+        # ),
     ]
 )
-pathf_output = "/home/laptq/laptq-fs26-shoplifting-detection/outputs/convert-torch-to-onnx/fs26/LAGCN/{}.onnx".format(
-    "--".join(
+
+pathf_output = "mydata/tmp/convert-torch-to-onnx/lagcn.{}.onnx".format(
+    "+".join(
         [
-            "{}-{}".format(path.split("/")[-3].split("--")[0], key)
+            "{}_{}".format(path.split("/")[-3].split(".")[0], key)
             for key, path in model_paths.items()
         ]
     )
 )
 
+
+dummy_input_shape = (5, 2, 15, 12)
+B, C, T, V = dummy_input_shape
+dummy_keypoint = torch.randn(dummy_input_shape)
+
+# Example inputs
+example_inputs = (dummy_keypoint,)
+
 ls_models = OrderedDict()
 for key, model_path in model_paths.items():
     model = Model(
-        num_class=14,
+        num_class=10,
         num_point=12,
         num_person=1,
         in_channels=2,
         graph="graph.coco_headless.Graph",
         graph_args=dict(labeling_mode="spatial"),
-        examplar="graph.cls_examplar_coco_headless_v2.CLSExamplar",
+        examplar="graph.cls_examplar_coco_headless_10_classes.CLSExamplar",
         examplar_args=dict(
-            topo_str=None,
-            num_class=14,
+            num_class=10,
             num_point=12,
         ),
     )
 
-    weights = torch.load(model_path)
+    weights = torch.load(model_path, map_location="cpu")
     weights = OrderedDict([[k.split("module.")[-1], v] for k, v in weights.items()])
     model.load_state_dict(weights)
     model.eval()
     ls_models[key] = model
 
+# headless
 bone_pairs = (
     (0, 1),
     (1, 0),
@@ -118,13 +128,26 @@ class EnsembleModel(nn.Module):
             output_bm, _, feat_bm = self.model_bm(x_bm)
         else:
             output_bm, feat_bm = None, None
+
         return [
             i
             for p in [
-                [output_j, feat_j],
-                [output_b, feat_b],
-                [output_jm, feat_jm],
-                [output_bm, feat_bm],
+                [
+                    output_j,
+                    # feat_j,
+                ],
+                [
+                    output_b,
+                    # feat_b,
+                ],
+                [
+                    output_jm,
+                    # feat_jm,
+                ],
+                [
+                    output_bm,
+                    # feat_bm,
+                ],
             ]
             for i in p
             if p[0] is not None
@@ -132,19 +155,20 @@ class EnsembleModel(nn.Module):
 
 
 model = EnsembleModel(ls_models)
+model.eval()
 
-dummy_input_shape = (5, 2, 15, 12)
-B, C, T, V = dummy_input_shape
-dummy_keypoint = torch.randn(dummy_input_shape)
-
-# Example inputs
-example_inputs = (dummy_keypoint,)
 
 os.makedirs(os.path.dirname(pathf_output), exist_ok=True)
 
 output_names = [
     it
-    for p in [(f"output_{key}", f"feat_{key}") for key in ls_models.keys()]
+    for p in [
+        (
+            f"output_{key}",
+            # f"feat_{key}",
+        )
+        for key in ls_models.keys()
+    ]
     for it in p
 ]
 
@@ -161,25 +185,20 @@ torch.onnx.export(
         "input1": {
             0: "batch_size",
         },
-        **{
-            it: {0: "batch_size"}
-            for p in [(f"output_{key}", f"feat_{key}") for key in ls_models.keys()]
-            for it in p
-        },
+        **{it: {0: "batch_size"} for it in output_names},
     },
     opset_version=12,
 )
 
 print("Model exported to {}".format(pathf_output))
 
-# --minShapes=input1:1x2x16x12x1,input2:16 --optShapes=input1:16x2x16x12x1,input2:16 --maxShapes=input1:32x2x16x12x1,input2:16 --shapes=input1:5x2x16x12x1,input2:16
-
-import numpy as np
-import onnx
 import onnxruntime as ort
+import onnx
+import numpy as np
 
 
 class ONNXPredictor:
+
     def __init__(self, **kwargs):
         model_path = kwargs["model_path"]
         enable_CUDAExecutionProvider = kwargs["enable_CUDAExecutionProvider"]
@@ -209,14 +228,17 @@ class ONNXPredictor:
 predictor = ONNXPredictor(
     model_path=pathf_output,
     enable_CUDAExecutionProvider=True,
-    enable_CPUExecutionProvider=False,
+    enable_CPUExecutionProvider=True,
 )
 
-print(
-    predictor.predict(
-        inputs={
-            "input1": np.random.randn(13, 2, 15, 12),
-        },
-        output_names=output_names,
-    )
-)
+# Sanity check: ONNX outputs must match PyTorch outputs
+test_input = np.random.randn(13, 2, 15, 12).astype(np.float32)
+onnx_outputs = predictor.predict(
+    inputs={"input1": test_input},
+    output_names=output_names,
+)["outputs"]
+with torch.no_grad():
+    torch_outputs = model(torch.from_numpy(test_input))
+for name, torch_out in zip(output_names, torch_outputs):
+    max_diff = np.abs(onnx_outputs[name] - torch_out.numpy()).max()
+    print(f"{name}: shape={onnx_outputs[name].shape}, max |onnx - torch| = {max_diff:.2e}")
