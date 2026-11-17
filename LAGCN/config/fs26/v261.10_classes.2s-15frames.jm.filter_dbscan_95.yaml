@@ -1,4 +1,4 @@
-work_dir: outputs/train/fs26/v261.10_classes.2s-15frames.jm.filter_dbscan_95
+work_dir: mymodels/checkpoints/fs26/action_recognition/LAGCN/v261.10_classes.2s-15frames.jm.filter_dbscan_95
 
 # feeder
 feeder: feeders.feeder_from_txt.Feeder
