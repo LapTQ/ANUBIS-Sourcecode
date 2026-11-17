@@ -142,7 +142,7 @@ class Model(nn.Module):
         A = self.graph.A
         self.data_bn = nn.BatchNorm1d(num_person * in_channels * num_point)
 
-        self.l1 = TCN_GCN_unit(3, 64, A, residual=False)
+        self.l1 = TCN_GCN_unit(in_channels, 64, A, residual=False)
         self.l2 = TCN_GCN_unit(64, 64, A)
         self.l3 = TCN_GCN_unit(64, 64, A)
         self.l4 = TCN_GCN_unit(64, 64, A)
@@ -158,6 +158,8 @@ class Model(nn.Module):
         bn_init(self.data_bn, 1)
 
     def forward(self, x):
+        if len(x.shape) == 4:  # N, C, T, V
+            x = x.unsqueeze(-1)  # N, C, T, V, 1
         N, C, T, V, M = x.size()
 
         x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)

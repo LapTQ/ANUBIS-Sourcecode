@@ -300,7 +300,7 @@ class Model(nn.Module):
 
         self.data_bn = nn.BatchNorm1d(num_person * in_channels * num_point)
 
-        self.l1 = TCN_GCN_unit(3, 64, A, residual=False, adaptive=adaptive, attention=attention)
+        self.l1 = TCN_GCN_unit(in_channels, 64, A, residual=False, adaptive=adaptive, attention=attention)
         self.l2 = TCN_GCN_unit(64, 64, A, adaptive=adaptive, attention=attention)
         self.l3 = TCN_GCN_unit(64, 64, A, adaptive=adaptive, attention=attention)
         self.l4 = TCN_GCN_unit(64, 64, A, adaptive=adaptive, attention=attention)
@@ -320,6 +320,8 @@ class Model(nn.Module):
             self.drop_out = lambda x: x
 
     def forward(self, x):
+        if len(x.shape) == 4:  # N, C, T, V
+            x = x.unsqueeze(-1)  # N, C, T, V, 1
         N, C, T, V, M = x.size()
 
         x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
